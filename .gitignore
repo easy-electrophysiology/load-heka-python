@@ -1,2 +1,2 @@
 *.pyc
-test/ee_run_tests.py
+ee_run_tests.py
