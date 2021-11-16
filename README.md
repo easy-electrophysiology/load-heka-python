@@ -168,6 +168,7 @@ Unsupported: pre version v2x00. These are DAT1 (unbundled filetypes). These can 
 
 Unsupported / Untested: v2x00-v2x05, v2x10-v2x15, v2x20, v2x30-v2x35, v2x40-v2x43, v2x52-v2x53, v2x60-v2x60, v2x71-v2x73, v2x80.
 
+```
 To support and test:
 v9:
 	v2x90
@@ -181,7 +182,7 @@ v1000
 	v2x91
 	v1.2   - tested ([build 1469])
 	v1.3
-
+```
 ## 5) Testing Your Files
 
 Options are provided to test the data read by LoadHeka against the data as displayed in Patchmaster. This is reccomended during the ongoing testing phase.
