@@ -1,7 +1,7 @@
 import numpy as np
-from trees.SharedTrees import cstr, get_fmt, Description, AmplifierState_v9, LockInParams_v9, UserParamDescrType
+from .SharedTrees import cstr, get_fmt, Description, AmplifierState_v9, LockInParams_v9, UserParamDescrType
 
-from trees.SharedTrees import  \
+from .SharedTrees import  \
      get_segment_class, \
      get_data_kind, \
      get_seg_store_type, \
