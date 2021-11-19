@@ -475,6 +475,21 @@ class LoadHeka:
             print("{0} (index: {1})".format(series["hd"]["SeLabel"],
                                             series_idx))
 
+    # TODO: need to test on the file with 3 channels in one series. Also, what if one series has completely different channels?
+    # TODO: # NOTE THAT NOT ALL SERIES MAY HAVE ALL CHANNELS
+
+    def get_num_sweeps_in_series(self, group_idx, series_idx):
+        return self.pul["ch"][group_idx]["ch"][series_idx]["hd"]["SeNumberSweeps"]
+
+    def get_channels(self, group_idx):
+        # TODO: is it gaurenteed the channels will be in the same index across series? DO A TEST!
+        channels = data_reader.get_channel_parameters_across_all_series(self.pul, group_idx)
+        return channels
+
+    def get_series_channels(self, group_idx, series_idx):
+        channels = data_reader.get_series_channels(self.pul, group_idx, series_idx)
+        return channels
+
 # Close file -----------------------------------------------------------------------------------------------------------------------------------------
 
     def open(self):
@@ -484,3 +499,4 @@ class LoadHeka:
     def close(self):
         self.fh.close()
         self.fh = None
+
