@@ -25,7 +25,7 @@ def get_stimulus_for_series(pul, pgf, group_idx, series_idx):
 
     data = create_stimulus_waveform_from_segments(segments, info, num_sweeps_in_recorded_data)
 
-    check_data(data, sweep, num_sweeps_in_recorded_data)
+    check_data(data, pul_sweep, num_sweeps_in_recorded_data)
 
     info["data"] = data
     return info
