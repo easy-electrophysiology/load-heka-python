@@ -27,11 +27,6 @@ def get_stimulus_for_series(pul, pgf, group_idx, series_idx):
 
     check_data(data, pul_sweep, num_sweeps_in_recorded_data)
 
-    if info["units"] == "V":  # TODO: THIS IS CORRECT BUT WILL BREAK TESTS!!!!
-        data /= 1000
-    elif info["units"] == "A":
-        data /= 1000000000000
-
     info["data"] = data
     return info
 
@@ -111,7 +106,12 @@ def create_stimulus_waveform_from_segments(segments, info, num_sweeps_in_recorde
                 data[sweep, i: i + seg.num_samples] = seg.ramp(sweep, start_voltage)
             i += seg.num_samples
 
-    data *= 1000  # data is stored as V and uA - convert to mV and pA
+    # data is stored as V and uA - ensure is V and A (TODO: own function)
+    if info["units"] == "A":
+        data /= 1000000000
+
+    if info["units"] == "mV":
+        data /= 1000
 
     if num_sweeps_in_recorded_data < data.shape[0]:
         warnings.warn("Stimulus protocol reshaped from {0} to {1} sweeps to match recorded data".format(data.shape[0],
