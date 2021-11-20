@@ -205,6 +205,7 @@ class TestSeries:
 
         self.handle_assert(all(time_sweeps_correct), "test_time")
 
+
 # Test Stimululus ------------------------------------------------------------------------------------------------------------------------------------
 
     def test_reconstructed_stimulus(self):
@@ -277,7 +278,7 @@ class TestSeries:
                 assert param > 99, "Less that 99% of samples are mode that {0} decimal places from Patchmaster".format(self.dp_thr)
 
             elif test_type == "test_time":
-                assert param, "Time does not match Patchmaster to 7 decimal places"
+                assert param, "Time does not match Patchmaster to 10 decimal places"
 
             elif test_type == "test_stim":
                 assert param, "Stimulus reconstruction does not match Patchmaster to 7 decimal places"
