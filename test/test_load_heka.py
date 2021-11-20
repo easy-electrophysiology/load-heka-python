@@ -94,7 +94,6 @@ class TestSeries:
             For the ramp, f2 group-1 series-8 should be 20,000 samples, 20,0000 samples, 20,000 samples. The first step of the ramp is sample 20,002,
             the last sample is 220,001 (this is exactly 200,000 samples). Thus the ramp does not start at 0 but at 0 + one step.
 
-            If the ascii file does not have a recording type (Im or Vm) the read sweeps will be all Nan.
             Data and time must be tested per-sweep because they can be different lengths but the reconstructured stimulis is always the same num samples
             per sweep
         """
@@ -215,6 +214,9 @@ class TestSeries:
             return
 
         raw_stim = self.get_raw_stim()
+        if raw_stim is False:
+            return
+
         load_heka_stim = self.conv(self.load_heka["stim"]["data"], self.load_heka["stim"]["units"])  # stim output is A and V for consistency
 
         stim_is_close = np.allclose(raw_stim, load_heka_stim, atol=1e-07, rtol=0)
@@ -228,6 +230,7 @@ class TestSeries:
                                                                                                  self.series_num,
                                                                                                  self.im_or_vm))
         self.stim_tested_flag = True
+
         self.handle_assert(stim_is_close, "test_stim")
 
     def get_raw_stim(self):

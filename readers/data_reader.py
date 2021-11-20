@@ -137,13 +137,6 @@ def get_series_channels(pul, group_idx, series_idx):
 
     return results
 
-
-# channel names   TrLabel
-# channel units   TrXUnit
-# gain            Series Level - AmplifierState_v9 -  sGain
-# offset
-# dtype            fmt, size, np_dtype = get_dataformat(rec["hd"]["TrDataFormat"])
-
 def get_max_num_channels_in_series(pul, group_idx, series_idx):
 
     series = pul["ch"][group_idx]["ch"][series_idx]

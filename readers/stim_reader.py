@@ -57,7 +57,7 @@ def get_dac_and_important_params(stim_sweep):
     }
 
     if info["units"] == "mV":
-        warnings.warn("Stimulus units are specified {0} but (almost certainly) stored as V). Please check. Updating to V.".format(info["units"]))  # e.g. 1 instance of units mV but the data was still stored as V... UseRelative
+        warnings.warn("Stimulus units are specified {0} but (almost certainly) stored as V). Please check. Updating to V.".format(info["units"]))  # e.g. 1 instance of units mV but the data was still stored as V...
         info["untis"] = "V"
 
     return dac, info
@@ -68,7 +68,7 @@ def check_header(dac):
         warnings.warn("Only StimScale supported, stimulus protocol not reconstructed")
         return False
 
-    for key in ["UseFileTemplate", "UseForLockIn", "UseForWavelength", "UseScaling", "UseForChirp", "UseForImaging"]:  # TODO: understand  (UseFileTemplate Tested but no issue)  UseRelative often on
+    for key in ["UseFileTemplate", "UseForLockIn", "UseForWavelength", "UseScaling", "UseForChirp", "UseForImaging"]:  # UseRelative often on, test
         if dac["hd"]["chStimToDacID"][key]:
             warnings.warn("Paramater {0} not tested,stimulus protocol not reconstructed".format(key))
             return False

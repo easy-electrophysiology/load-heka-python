@@ -1,2 +1,3 @@
 *.pyc
 ee_run_tests.py
+ee_test_files/

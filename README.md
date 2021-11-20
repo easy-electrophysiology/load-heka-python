@@ -110,9 +110,9 @@ This will return the dictionary data with series:
 
 `series["data"]` - a num sweeps x num samples numpy array containing the data. Note that in HEKA it is possible for 
                    differrent sweeps in the same series to have a different number of samples. In this instance, the end
-				   of the shorter sweeps will be padded with NaN.
+				   of the shorter sweeps will be padded with the average of the existing sweep.
 
-`series["time"]` - a num_sweeps x num_samples matrix of the record timings (this will also be NaN padded for shorter sweeps)
+`series["time"]` - a num_sweeps x num_samples matrix of the record timings.
 
 `series["stim"]` - if requested, a num_sweeps x num_samples matrix of the stimulus protocol 
 				   reconstructed from the StimTree (note not all protocols currently supported, see section 4).
