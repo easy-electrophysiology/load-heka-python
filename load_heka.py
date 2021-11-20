@@ -6,6 +6,21 @@ from .trees.SharedTrees import BundleHeader, BundleItems, UserParamDescrType, Lo
 from .readers import stim_reader
 from .readers import data_reader
 
+def _import_trees(header):
+    """
+    Import the relevant tree (v9 or v1000) based on header. TODO: Probably a nicer way to do this.
+    """
+    if header["oVersion"] in ["v2x90.2, 22-Nov-2016"]:
+        from .trees import Trees_v9 as Trees
+
+    elif header["oVersion"] in ["v2x90.5, 09-Apr-2019", "1.2.0 [Build 1469]"]:
+        from .trees import Trees_v1000 as Trees
+    else:
+        raise Exception("Version not current supported, please contact support@easyelectrophysiology.com")
+
+    return Trees
+
+
 class LoadHeka:
     """
     Module for loading heka files into python. See documentation in README.md to get started and for full documentation.
@@ -32,7 +47,7 @@ class LoadHeka:
         assert self.header["oSignature"] == "DAT2", \
             "Only version DAT2 onwards are supported"
 
-        self._import_trees()
+        self.Trees = _import_trees(self.header)
         self.pgf = self._get_pgf()
         self.pul = self._get_pul()
         self.amp = self._get_amp()
@@ -55,20 +70,6 @@ class LoadHeka:
             header = self._unpack_header(BundleHeader(), ">")
 
         return header
-
-    def _import_trees(self):
-        """
-        Import the relevant tree (v9 or v1000) based on header. TODO: Probably a nicer way to do this.
-        """
-        if self.header["oVersion"] in ["v2x90.2, 22-Nov-2016"]:
-            from trees import Trees_v9 as Trees
-
-        elif self.header["oVersion"] in ["v2x90.5, 09-Apr-2019", "1.2.0 [Build 1469]"]:
-            from trees import Trees_v1000 as Trees
-        else:
-            raise Exception("Version not current supported, please contact support@easyelectrophysiology.com")
-
-        self.Trees = Trees
 
     def _get_pgf(self):
         """
@@ -306,7 +307,7 @@ class LoadHeka:
                     for i_level5 in range(level4_nchilds):
 
                         this_record = {"hd": self._unpack_header(LevelFive()),
-                                       "data": np.nan}
+                                       "data": None}
                         record_childs = struct.unpack(endian + "i", self.fh.read(4))[0]
                         assert record_childs == 0
 
@@ -387,6 +388,11 @@ class LoadHeka:
 
         Note this function will not work if the requested series data is not loaded into the pulse tree and the file is then closed.
 
+
+        Logic: in some instances the data for a channel will not exist, however the stimulus protocol still will and a
+               pulse record will exist for it. As such we need to act like the data exists and collect all other information
+               inlcuding the stimulus protocol. This leaads to the slightly strange organisation of this function, which could be refactored.
+
         INPUTS:
 
             Im_or_Vm - "Im" or "Vm" to return current or voltage record
@@ -408,8 +414,11 @@ class LoadHeka:
             stim protocol for the series. see stim_reader.py for details on supported stimulation protocols. If the StimTree cannot
             be reconstructed a warning will be shown and the field False.
 
+        TODO: needs refactoring, too long
+
         """
         series = self.pul["ch"][group_idx]["ch"][series_idx]
+        data_exists = self._channel_exists_in_series(Im_or_Vm, group_idx, series_idx)
 
         out = {
             "data": None,
@@ -421,15 +430,13 @@ class LoadHeka:
             "t_starts": [],
             "t_stops": [],
             "stim": None,
+            "dtype": "float64",  # note these are after prorcessing (not the original stored data)
         }
-
-        if not self._channel_exists_in_series(Im_or_Vm, group_idx, series_idx):
-            return out
 
         num_rows = len(series["ch"])
         max_num_samples = self._get_max_num_samples_from_sweeps_in_series(series["ch"])
 
-        if np.isnan(series["ch"][0]["ch"][0]["data"]).all():
+        if not np.any(series["ch"][0]["ch"][0]["data"]):
             data_reader.fill_pul_with_data(self.pul, self.fh, group_idx, series_idx)
 
         if include_stim_protocol:
@@ -438,6 +445,7 @@ class LoadHeka:
         for key in ["data", "time"]:
             out[key] = np.full([num_rows, max_num_samples],
                                np.nan)
+
         for sweep_idx, sweep in enumerate(series["ch"]):
 
             assert len(sweep["ch"]) <= 2, "Only sweeps with 2 records is supported, group: {0}, series: {1}, sweep : {2}".format(group_idx + 1,
@@ -466,15 +474,20 @@ class LoadHeka:
                     t_stop = t_start + (num_samples * ts)
                     out["t_stops"].append(t_stop)
 
-                    out["data"][sweep_idx, 0:num_samples] = rec["data"]
-
-                    if len(rec["data"]) < max_num_samples:
-                        out["data"][sweep_idx, num_samples:] = np.mean(rec["data"])
-
                     out["time"][sweep_idx, :] = np.arange(max_num_samples) * ts + t_start
+
+                    if data_exists:
+                        out["data"][sweep_idx, 0:num_samples] = rec["data"]
+
+                        if len(rec["data"]) < max_num_samples:
+                            out["data"][sweep_idx, num_samples:] = np.mean(rec["data"])
 
                 else:
                     continue
+
+        if not data_exists:
+            out["data"] = None
+
         return out
 
 # Print Names ----------------------------------------------------------------------------------------------------------------------------------------

@@ -13,7 +13,8 @@ from .SharedTrees import \
     get_ampl_mode_type, \
     get_ext_trigger_type, \
     get_increment_mode_type, \
-    get_stim_to_dac_id
+    get_stim_to_dac_id, \
+    get_recording_mode
 
 
 """
@@ -376,7 +377,7 @@ class TraceRecord(Description):
             ("TrDataKind",                  "h",           get_data_kind),      # (* SET16 *)
             ("TrUseXStart",                 "?"),                               # (* BOOLEAN *)
             ("TrTcKind",                    "b"),                               # (* BYTE *)
-            ("TrRecordingMode",             "b"),                               # (* BYTE *)
+            ("TrRecordingMode",             "b",           get_recording_mode),  # (* BYTE *)
             ("TrAmplIndex",                 "c"),                               # (* CHAR *)
             ("TrDataFormat",                "b"),                               # (* BYTE *)
             ("TrDataAbscissa",              "b"),                               # (* BYTE *)
