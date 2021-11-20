@@ -189,6 +189,14 @@ def get_seg_store_type(byte):
             "SegStoreStart",
             "SegStoreEnd"][byte]
 
+def get_recording_mode(byte):
+    return ["InOut",
+            "OnCell",
+            "OutOut",
+            "WholeCell",
+            "CClamp",
+            "VClamp",
+            "NoMode"][byte]
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------
 # Header_v9
