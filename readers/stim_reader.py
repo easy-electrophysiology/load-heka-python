@@ -27,6 +27,11 @@ def get_stimulus_for_series(pul, pgf, group_idx, series_idx):
 
     check_data(data, pul_sweep, num_sweeps_in_recorded_data)
 
+    if info["units"] == "V":  # TODO: THIS IS CORRECT BUT WILL BREAK TESTS!!!!
+        data /= 1000
+    elif info["units"] == "A":
+        data /= 1000000000000
+
     info["data"] = data
     return info
 

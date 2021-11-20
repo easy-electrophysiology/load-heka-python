@@ -438,8 +438,10 @@ class LoadHeka:
                     t_stop = t_start + (num_samples * ts)
                     out["t_stops"].append(t_stop)
 
-                    data = rec["data"]
-                    out["data"][sweep_idx, 0:num_samples] = data
+                    out["data"][sweep_idx, 0:num_samples] = rec["data"]
+
+                    if len(rec["data"]) < max_num_samples:
+                        out["data"][sweep_idx, num_samples:] = np.mean(rec["data"])
 
                     out["time"][sweep_idx, 0:num_samples] = np.arange(num_samples) * ts + t_start
 
@@ -474,6 +476,20 @@ class LoadHeka:
         for series_idx, series in enumerate(self.pul["ch"][group_idx]["ch"]):
             print("{0} (index: {1})".format(series["hd"]["SeLabel"],
                                             series_idx))
+
+    def get_dict_of_group_and_series(self):
+        """
+        """
+        groups_and_series = {}
+        for group in self.pul["ch"]:
+
+            group_key = group["hd"]["GrLabel"]
+
+            groups_and_series[group_key] = []
+            for series in group["ch"]:
+                groups_and_series[group_key].append(series["hd"]["SeLabel"])
+
+        return groups_and_series
 
     # TODO: need to test on the file with 3 channels in one series. Also, what if one series has completely different channels?
     # TODO: # NOTE THAT NOT ALL SERIES MAY HAVE ALL CHANNELS
