@@ -68,9 +68,10 @@ def test_heka_reader(base_path, version, group_series_to_test, dp_thr=1e-6, info
                               supress_stim,
                               )
 
-            supress_time = True
             if test.stim_tested_flag:
                 supress_stim = True
+            if test.time_tested_flag:
+                supress_time = True
 
         print("\n")
 
@@ -93,7 +94,6 @@ class TestSeries:
             For the ramp, f2 group-1 series-8 should be 20,000 samples, 20,0000 samples, 20,000 samples. The first step of the ramp is sample 20,002,
             the last sample is 220,001 (this is exactly 200,000 samples). Thus the ramp does not start at 0 but at 0 + one step.
 
-            If the ascii file does not have a recording type (Im or Vm) the read sweeps will be all Nan.
             Data and time must be tested per-sweep because they can be different lengths but the reconstructured stimulis is always the same num samples
             per sweep
         """
@@ -106,6 +106,7 @@ class TestSeries:
         self.assert_mode = assert_mode
         self.dp_thr = dp_thr
         self.stim_tested_flag = False
+        self.time_tested_flag = False
 
         if self.info_type == "mean_dp_match":
             self.print_mean_and_sd_demical_place_match()
@@ -131,13 +132,14 @@ class TestSeries:
         """
         Continue i.e. if Vm skip Im
         """
+        if not np.any(self.load_heka["data"]):
+            return
+
         percent_close = []
         for raw_heka_sweep, load_heka_sweep in zip(self.raw_heka[self.im_or_vm],
                                                    self.load_heka["data"]):
-            if not np.isnan(raw_heka_sweep).all():
-                percent_close.append(self.percent_isclose(self.clean(raw_heka_sweep), self.clean(load_heka_sweep), self.dp_thr))
-            else:
-                continue
+
+            percent_close.append(self.percent_isclose(self.clean_data(raw_heka_sweep), self.clean_data(load_heka_sweep), self.dp_thr))
 
         return percent_close
 
@@ -145,13 +147,16 @@ class TestSeries:
         """
         """
         all_num_dp = []
+
+        if not np.any(self.load_heka["data"]):
+            return
+
         for raw_heka_sweep, load_heka_sweep in zip(self.raw_heka[self.im_or_vm],
                                                    self.load_heka["data"]):
-            if not np.isnan(raw_heka_sweep).all():
-                num_dp = self.num_dp(np.abs(self.clean(raw_heka_sweep) - self.clean(load_heka_sweep)))
-                all_num_dp.append(num_dp)
-            else:
-                continue
+
+            difference = self.clean_data(raw_heka_sweep, expected_len=len(load_heka_sweep)) - self.clean_data(load_heka_sweep)
+            num_dp = self.num_dp(np.abs(difference))
+            all_num_dp.append(num_dp)
 
         if all_num_dp:
             all_num_dp = np.hstack(all_num_dp)
@@ -178,14 +183,17 @@ class TestSeries:
     def test_time(self):
         """
         """
+        if not np.any(self.load_heka["time"]):
+            return
+
         time_sweeps_correct = []
         for raw_sweep_time, load_heka_sweep_time in zip(self.raw_heka["time_" + self.im_or_vm],
                                                         self.load_heka["time"]):
-            if not np.isnan(raw_sweep_time).all():
-                sweep_correct = np.allclose(self.clean(raw_sweep_time, conv=False),
-                                            self.clean(load_heka_sweep_time, conv=False),
-                                            atol=1e-10, rtol=0)
-                time_sweeps_correct.append(sweep_correct)
+
+            sweep_correct = np.allclose(self.clean_time(raw_sweep_time, expected_len=len(load_heka_sweep_time)),
+                                        load_heka_sweep_time,
+                                        atol=1e-10, rtol=0)
+            time_sweeps_correct.append(sweep_correct)
 
         if all(time_sweeps_correct):
             print("time correct for group {0} series {1}".format(self.group_num,
@@ -193,6 +201,7 @@ class TestSeries:
         else:
             print("Time INCORRECT for group {0} series {1}".format(self.group_num,
                                                                    self.series_num))
+        self.time_tested_flag = True
 
         self.handle_assert(all(time_sweeps_correct), "test_time")
 
@@ -205,20 +214,24 @@ class TestSeries:
             return
 
         raw_stim = self.get_raw_stim()
-        if not np.isnan(raw_stim).all() and raw_stim is not False:
+        if raw_stim is False:
+            return
 
-            stim_is_close = np.allclose(raw_stim, self.load_heka["stim"]["data"], atol=1e-7, rtol=0)
+        load_heka_stim = self.conv(self.load_heka["stim"]["data"], self.load_heka["stim"]["units"])  # stim output is A and V for consistency
 
-            if stim_is_close:
-                print("stimulus was correctly reconstructed for group {0} series {1} {2}".format(self.group_num,
+        stim_is_close = np.allclose(raw_stim, load_heka_stim, atol=1e-07, rtol=0)
+
+        if stim_is_close:
+            print("stimulus was correctly reconstructed for group {0} series {1} {2}".format(self.group_num,
+                                                                                             self.series_num,
+                                                                                             self.im_or_vm))
+        else:
+            print("stimulus was NOT correctly reconstructed for group {0} series {1} {2}".format(self.group_num,
                                                                                                  self.series_num,
                                                                                                  self.im_or_vm))
-            else:
-                print("stimulus was NOT correctly reconstructed for group {0} series {1} {2}".format(self.group_num,
-                                                                                                     self.series_num,
-                                                                                                     self.im_or_vm))
-            self.stim_tested_flag = True
-            self.handle_assert(stim_is_close, "test_stim")
+        self.stim_tested_flag = True
+
+        self.handle_assert(stim_is_close, "test_stim")
 
     def get_raw_stim(self):
         """
@@ -258,7 +271,7 @@ class TestSeries:
         if self.assert_mode:
 
             if test_type == "mean_dp_match":
-                assert param > 5, "Mean difference from Patchmaster is more than 5 decimal places"
+                assert param > 4, "Mean difference from Patchmaster is more than 5 decimal places"
 
             elif test_type == "perc_dp_match":
                 assert param > 99, "Less that 99% of samples are mode that {0} decimal places from Patchmaster".format(self.dp_thr)
@@ -269,20 +282,64 @@ class TestSeries:
             elif test_type == "test_stim":
                 assert param, "Stimulus reconstruction does not match Patchmaster to 7 decimal places"
 
-    def clean(self, data, conv=True):
+    def clean_data(self, data, expected_len=None):
         """
         """
-        data = data[~np.isnan(data)]
-        if conv:
-            data = self.conv(data,
-                             self.im_or_vm)
+        if expected_len:
+            if len(data) != expected_len:
+                data = self.pad_short_data_with_mean(data, expected_len)
+
+        data = self.conv(data,
+                         self.im_or_vm)
         return data
+
+    def clean_time(self, data, expected_len=None):
+
+        if expected_len:
+            if len(data) != expected_len:
+                data = self.pad_short_time_with_extra_time(data, expected_len)
+
+        return data
+
+    @staticmethod
+    def pad_short_time_with_extra_time(data, expected_len):
+        """
+        HEKA export data is not full, is a sweep is cut short it will be missing the end. However HekaLoad will always
+        export full time. So pad heka export data here to match
+        """
+        new_data = np.full(expected_len, np.nan)
+        len_data = len(data)
+        len_empty_data = expected_len - len_data
+
+        new_data[0:len_data] = data
+        ts = data[1] - data[0]
+
+        pad_data = np.arange(1, len_empty_data + 1) * ts + data[-1]
+        new_data[len_data:] = pad_data
+
+        return new_data
+
+    @staticmethod
+    def pad_short_data_with_mean(data, expected_len):
+
+        len_short_data = len(data)
+
+        new_data = np.full(expected_len, np.nan)
+        new_data[0:len_short_data] = data
+        new_data[len_short_data:] = np.mean(data)
+
+        return new_data
 
     def clean_raw_stim(self, raw_heka_output):
         """
         Raw stim is output from ascii script as a list of np arrays (sweeps)
+
+        For some reason when stim doesn't exist heka export as NaN but LoadHeka will export as holding current
         """
         stim_data = np.array(raw_heka_output)
+        if np.isnan(stim_data).all():
+            stim_data = np.zeros(np.shape(stim_data))
+
         conv_stim_data = self.conv(stim_data,
                                    self.load_heka["stim"]["units"])
         return conv_stim_data
@@ -297,6 +354,9 @@ class TestSeries:
             factor = 1000000000000
         elif units in ["Vm", "V"]:
             factor = 1000
+        elif units == "mV":
+            factor = 1
+
         return data * factor
 
     @staticmethod

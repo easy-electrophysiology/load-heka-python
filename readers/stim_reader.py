@@ -56,6 +56,10 @@ def get_dac_and_important_params(stim_sweep):
         "use_relative":  dac["hd"]["chStimToDacID"]["UseRelative"],
     }
 
+    if info["units"] == "mV":
+        warnings.warn("Stimulus units are specified {0} but (almost certainly) stored as V). Please check. Updating to V.".format(info["units"]))  # e.g. 1 instance of units mV but the data was still stored as V...
+        info["untis"] = "V"
+
     return dac, info
 
 def check_header(dac):
@@ -64,7 +68,7 @@ def check_header(dac):
         warnings.warn("Only StimScale supported, stimulus protocol not reconstructed")
         return False
 
-    for key in ["UseFileTemplate", "UseForLockIn", "UseForWavelength", "UseScaling", "UseForChirp", "UseForImaging"]:  # TODO: understand  (UseFileTemplate Tested but no issue)
+    for key in ["UseFileTemplate", "UseForLockIn", "UseForWavelength", "UseScaling", "UseForChirp", "UseForImaging"]:  # UseRelative often on, test
         if dac["hd"]["chStimToDacID"][key]:
             warnings.warn("Paramater {0} not tested,stimulus protocol not reconstructed".format(key))
             return False
@@ -106,7 +110,9 @@ def create_stimulus_waveform_from_segments(segments, info, num_sweeps_in_recorde
                 data[sweep, i: i + seg.num_samples] = seg.ramp(sweep, start_voltage)
             i += seg.num_samples
 
-    data *= 1000  # data is stored as V and uA - convert to mV and pA
+    # data is stored as V and uA - ensure is V and A (TODO: own function)
+    if info["units"] == "A":
+        data /= 1000000000
 
     if num_sweeps_in_recorded_data < data.shape[0]:
         warnings.warn("Stimulus protocol reshaped from {0} to {1} sweeps to match recorded data".format(data.shape[0],

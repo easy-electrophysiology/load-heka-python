@@ -109,7 +109,7 @@ def get_list_of_channel_info_dicts(num_channels, param_dict):
 
 def get_series_channels(pul, group_idx, series_idx):
 
-    param_dict = {"name": [], "unit": [], "dtype": [], "sampling_step": []}
+    param_dict = {"name": [], "unit": [], "dtype": [], "sampling_step": [], "recording_mode": []}
     series = pul["ch"][group_idx]["ch"][series_idx]
 
     num_channels = get_max_num_channels_in_series(pul, group_idx, series_idx)
@@ -124,6 +124,7 @@ def get_series_channels(pul, group_idx, series_idx):
             __, __, __, dtype = get_dataformat(rec["hd"]["TrDataFormat"])
             channels[rec_idx]["dtype"].append(dtype)
             channels[rec_idx]["sampling_step"].append(rec["hd"]["TrXInterval"])
+            channels[rec_idx]["recording_mode"].append(rec["hd"]["TrRecordingMode"])
 
     # CHECK CHANNELS ARE ALL THE SAME
     results = [{} for __ in range(num_channels)]
@@ -135,13 +136,6 @@ def get_series_channels(pul, group_idx, series_idx):
             results[chan_idx][key] = channels[chan_idx][key][0]
 
     return results
-
-
-# channel names   TrLabel
-# channel units   TrXUnit
-# gain            Series Level - AmplifierState_v9 -  sGain
-# offset
-# dtype            fmt, size, np_dtype = get_dataformat(rec["hd"]["TrDataFormat"])
 
 def get_max_num_channels_in_series(pul, group_idx, series_idx):
 

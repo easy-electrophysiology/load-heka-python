@@ -1,10 +1,10 @@
 from io import open
 import numpy as np
 import struct
-from .trees.SharedTrees import BundleHeader, BundleItems, UserParamDescrType, LockInParams_v9, AmplifierState_v9, UserParamDescrType, Description,  \
+from trees.SharedTrees import BundleHeader, BundleItems, UserParamDescrType, LockInParams_v9, AmplifierState_v9, UserParamDescrType, Description,  \
      cstr, MarkerRootRecord, MarkerRecord, get_stim_to_dac_id, get_data_kind
-from .readers import stim_reader
-from .readers import data_reader
+from readers import stim_reader
+from readers import data_reader
 
 class LoadHeka:
     """
@@ -61,10 +61,10 @@ class LoadHeka:
         Import the relevant tree (v9 or v1000) based on header. TODO: Probably a nicer way to do this.
         """
         if self.header["oVersion"] in ["v2x90.2, 22-Nov-2016"]:
-            from .trees import Trees_v9 as Trees
+            from trees import Trees_v9 as Trees
 
         elif self.header["oVersion"] in ["v2x90.5, 09-Apr-2019", "1.2.0 [Build 1469]"]:
-            from .trees import Trees_v1000 as Trees
+            from trees import Trees_v1000 as Trees
         else:
             raise Exception("Version not current supported, please contact support@easyelectrophysiology.com")
 
@@ -219,10 +219,10 @@ class LoadHeka:
 
                 name, fmt, decoder = self._get_entry_details(entry)
 
-                if not self._decoder_is_class(decoder):
-                    sub_array[name] = self._read_byte(substruct[cnt], decoder, endian)
-                else:
+                if self._decoder_is_class(decoder):
                     sub_array[name] = self._unpack_substruct(substruct[cnt], decoder, endian)
+                else:
+                    sub_array[name] = self._read_byte(substruct[cnt], decoder, endian)
                 cnt += 1
 
             repeats.append(sub_array)
@@ -350,6 +350,31 @@ class LoadHeka:
             for series_idx, __ in enumerate(group["ch"]):
                 data_reader.fill_pul_with_data(self.pul, self.fh, group_idx, series_idx)
 
+    def _channel_exists_in_series(self, Im_or_Vm, group_idx, series_idx):
+        """
+        Check the specified channel actually exists in the data (some series only have
+        Im or Vm recordings)
+        """
+        series_channels = self.get_series_channels(group_idx, series_idx)
+        for channel in series_channels:
+            if channel["unit"] == "V" and Im_or_Vm == "Vm" or \
+                    channel["unit"] == "A" and Im_or_Vm == "Im":
+                return True
+        return False
+
+    def get_stimulus_for_series(self, group_idx, series_idx):
+        series_stim = stim_reader.get_stimulus_for_series(self.pul, self.pgf, group_idx, series_idx)
+        return series_stim
+
+    @staticmethod
+    def _get_max_num_samples_from_sweeps_in_series(series_records):
+        """
+        Assumes number of samples is the same for both records (if sweep has two records)
+        """
+        sweep_num_samples = [record["ch"][0]["hd"]["TrDataPoints"] for record in series_records]
+        max_num_samples = max(sweep_num_samples)
+        return max_num_samples
+
 # ----------------------------------------------------------------------------------------------------------------------------------------------------
 # Public_functions
 # ----------------------------------------------------------------------------------------------------------------------------------------------------
@@ -377,7 +402,7 @@ class LoadHeka:
             while verbose this is kept for now as the HEKA filetype is very dynamic, and better to be clearer incase of unxpected edge cases.
 
             As well as relevant parameters for the record, the "data" field contains a sweep x num samples numpy array of all sweeps from the series. If
-            a sweep has less samples in it than the others, the end of the row will be padded with NaN (for both data and time).
+            a sweep has less samples in it than the others, the end of the row will be padded with the average of the existing data.
 
             If include_stim_protocol is True, the "stim" field will contain a sweep x stimulation numpy array containing the fill
             stim protocol for the series. see stim_reader.py for details on supported stimulation protocols. If the StimTree cannot
@@ -398,8 +423,11 @@ class LoadHeka:
             "stim": None,
         }
 
+        if not self._channel_exists_in_series(Im_or_Vm, group_idx, series_idx):
+            return out
+
         num_rows = len(series["ch"])
-        max_num_samples = self.get_max_num_samples_from_sweeps_in_series(series["ch"])
+        max_num_samples = self._get_max_num_samples_from_sweeps_in_series(series["ch"])
 
         if np.isnan(series["ch"][0]["ch"][0]["data"]).all():
             data_reader.fill_pul_with_data(self.pul, self.fh, group_idx, series_idx)
@@ -409,7 +437,7 @@ class LoadHeka:
 
         for key in ["data", "time"]:
             out[key] = np.full([num_rows, max_num_samples],
-                                np.nan)
+                               np.nan)
         for sweep_idx, sweep in enumerate(series["ch"]):
 
             assert len(sweep["ch"]) <= 2, "Only sweeps with 2 records is supported, group: {0}, series: {1}, sweep : {2}".format(group_idx + 1,
@@ -438,27 +466,16 @@ class LoadHeka:
                     t_stop = t_start + (num_samples * ts)
                     out["t_stops"].append(t_stop)
 
-                    data = rec["data"]
-                    out["data"][sweep_idx, 0:num_samples] = data
+                    out["data"][sweep_idx, 0:num_samples] = rec["data"]
 
-                    out["time"][sweep_idx, 0:num_samples] = np.arange(num_samples) * ts + t_start
+                    if len(rec["data"]) < max_num_samples:
+                        out["data"][sweep_idx, num_samples:] = np.mean(rec["data"])
+
+                    out["time"][sweep_idx, :] = np.arange(max_num_samples) * ts + t_start
 
                 else:
                     continue
         return out
-
-    def get_stimulus_for_series(self, group_idx, series_idx):
-        series_stim = stim_reader.get_stimulus_for_series(self.pul, self.pgf, group_idx, series_idx)
-        return series_stim
-
-    @staticmethod
-    def get_max_num_samples_from_sweeps_in_series(series_records):
-        """
-        Assumes number of samples is the same for both records (if sweep has two records)
-        """
-        sweep_num_samples = [record["ch"][0]["hd"]["TrDataPoints"] for record in series_records]
-        max_num_samples = max(sweep_num_samples)
-        return max_num_samples
 
 # Print Names ----------------------------------------------------------------------------------------------------------------------------------------
 
@@ -475,14 +492,29 @@ class LoadHeka:
             print("{0} (index: {1})".format(series["hd"]["SeLabel"],
                                             series_idx))
 
-    # TODO: need to test on the file with 3 channels in one series. Also, what if one series has completely different channels?
-    # TODO: # NOTE THAT NOT ALL SERIES MAY HAVE ALL CHANNELS
+    def get_dict_of_group_and_series(self):
+        """
+        """
+        groups_and_series = {}
+        for group in self.pul["ch"]:
+
+            group_key = group["hd"]["GrLabel"]
+
+            groups_and_series[group_key] = []
+            for series in group["ch"]:
+                groups_and_series[group_key].append(series["hd"]["SeLabel"])
+
+        return groups_and_series
 
     def get_num_sweeps_in_series(self, group_idx, series_idx):
         return self.pul["ch"][group_idx]["ch"][series_idx]["hd"]["SeNumberSweeps"]
 
     def get_channels(self, group_idx):
-        # TODO: is it gaurenteed the channels will be in the same index across series? DO A TEST!
+        """
+        Assmes channel order is the same across all series, this is tested in data_reader.get_series_channels()
+
+        Note that not all series may have all channels.
+        """
         channels = data_reader.get_channel_parameters_across_all_series(self.pul, group_idx)
         return channels
 
