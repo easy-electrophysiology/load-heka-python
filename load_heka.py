@@ -1,10 +1,10 @@
 from io import open
 import numpy as np
 import struct
-from trees.SharedTrees import BundleHeader, BundleItems, UserParamDescrType, LockInParams_v9, AmplifierState_v9, UserParamDescrType, Description,  \
+from .trees.SharedTrees import BundleHeader, BundleItems, UserParamDescrType, LockInParams_v9, AmplifierState_v9, UserParamDescrType, Description,  \
      cstr, MarkerRootRecord, MarkerRecord, get_stim_to_dac_id, get_data_kind
-from readers import stim_reader
-from readers import data_reader
+from .readers import stim_reader
+from .readers import data_reader
 
 class LoadHeka:
     """
