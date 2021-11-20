@@ -1,20 +1,20 @@
 from io import open
 import numpy as np
 import struct
-from trees.SharedTrees import BundleHeader, BundleItems, UserParamDescrType, LockInParams_v9, AmplifierState_v9, UserParamDescrType, Description,  \
+from .trees.SharedTrees import BundleHeader, BundleItems, UserParamDescrType, LockInParams_v9, AmplifierState_v9, UserParamDescrType, Description,  \
      cstr, MarkerRootRecord, MarkerRecord, get_stim_to_dac_id, get_data_kind
-from readers import stim_reader
-from readers import data_reader
+from .readers import stim_reader
+from .readers import data_reader
 
 def _import_trees(header):
     """
     Import the relevant tree (v9 or v1000) based on header. TODO: Probably a nicer way to do this.
     """
     if header["oVersion"] in ["v2x90.2, 22-Nov-2016"]:
-        from trees import Trees_v9 as Trees
+        from .trees import Trees_v9 as Trees
 
     elif header["oVersion"] in ["v2x90.5, 09-Apr-2019", "1.2.0 [Build 1469]"]:
-        from trees import Trees_v1000 as Trees
+        from .trees import Trees_v1000 as Trees
     else:
         raise Exception("Version not current supported, please contact support@easyelectrophysiology.com")
 
@@ -418,7 +418,6 @@ class LoadHeka:
 
         """
         series = self.pul["ch"][group_idx]["ch"][series_idx]
-        data_exists = self._channel_exists_in_series(Im_or_Vm, group_idx, series_idx)
 
         out = {
             "data": None,
@@ -432,6 +431,10 @@ class LoadHeka:
             "stim": None,
             "dtype": "float64",  # note these are after prorcessing (not the original stored data)
         }
+
+        data_exists = self._channel_exists_in_series(Im_or_Vm, group_idx, series_idx)
+        if not data_exists:
+            return out
 
         num_rows = len(series["ch"])
         max_num_samples = self._get_max_num_samples_from_sweeps_in_series(series["ch"])
@@ -476,21 +479,20 @@ class LoadHeka:
 
                     out["time"][sweep_idx, :] = np.arange(max_num_samples) * ts + t_start
 
-                    if data_exists:
-                        out["data"][sweep_idx, 0:num_samples] = rec["data"]
+     #               if data_exists:
+                    out["data"][sweep_idx, 0:num_samples] = rec["data"]
 
-                        if len(rec["data"]) < max_num_samples:
-                            out["data"][sweep_idx, num_samples:] = np.mean(rec["data"])
+                    if len(rec["data"]) < max_num_samples:
+                        out["data"][sweep_idx, num_samples:] = np.mean(rec["data"])
 
                 else:
                     continue
 
-        if not data_exists:
-            out["data"] = None
+     #   if not data_exists:
+      #      out["data"] = None
 
-        if np.isnan(out["time"]).all():  # TODO: this is an edge case, where stim exists but has no associated record.
-            out["time"] = None
-
+       # if np.isnan(out["time"]).all():  # TODO: this is an edge case, where stim exists but has no associated record.
+        #    out["time"] = None
 
         return out
 
