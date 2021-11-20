@@ -1,10 +1,10 @@
 from io import open
 import numpy as np
 import struct
-from .trees.SharedTrees import BundleHeader, BundleItems, UserParamDescrType, LockInParams_v9, AmplifierState_v9, UserParamDescrType, Description,  \
+from trees.SharedTrees import BundleHeader, BundleItems, UserParamDescrType, LockInParams_v9, AmplifierState_v9, UserParamDescrType, Description,  \
      cstr, MarkerRootRecord, MarkerRecord, get_stim_to_dac_id, get_data_kind
-from .readers import stim_reader
-from .readers import data_reader
+from readers import stim_reader
+from readers import data_reader
 
 class LoadHeka:
     """
@@ -61,10 +61,10 @@ class LoadHeka:
         Import the relevant tree (v9 or v1000) based on header. TODO: Probably a nicer way to do this.
         """
         if self.header["oVersion"] in ["v2x90.2, 22-Nov-2016"]:
-            from .trees import Trees_v9 as Trees
+            from trees import Trees_v9 as Trees
 
         elif self.header["oVersion"] in ["v2x90.5, 09-Apr-2019", "1.2.0 [Build 1469]"]:
-            from .trees import Trees_v1000 as Trees
+            from trees import Trees_v1000 as Trees
         else:
             raise Exception("Version not current supported, please contact support@easyelectrophysiology.com")
 
@@ -398,6 +398,9 @@ class LoadHeka:
             "stim": None,
         }
 
+        if not self._channel_exists_in_series(Im_or_Vm, group_idx, series_idx):
+            return out
+
         num_rows = len(series["ch"])
         max_num_samples = self.get_max_num_samples_from_sweeps_in_series(series["ch"])
 
@@ -409,7 +412,7 @@ class LoadHeka:
 
         for key in ["data", "time"]:
             out[key] = np.full([num_rows, max_num_samples],
-                                np.nan)
+                               np.nan)
         for sweep_idx, sweep in enumerate(series["ch"]):
 
             assert len(sweep["ch"]) <= 2, "Only sweeps with 2 records is supported, group: {0}, series: {1}, sweep : {2}".format(group_idx + 1,
@@ -443,11 +446,23 @@ class LoadHeka:
                     if len(rec["data"]) < max_num_samples:
                         out["data"][sweep_idx, num_samples:] = np.mean(rec["data"])
 
-                    out["time"][sweep_idx, 0:num_samples] = np.arange(num_samples) * ts + t_start
+                    out["time"][sweep_idx, :] = np.arange(max_num_samples) * ts + t_start
 
                 else:
                     continue
         return out
+
+    def _channel_exists_in_series(self, Im_or_Vm, group_idx, series_idx):
+        """
+        Check the specified channel actually exists in the data (some series only have
+        Im or Vm recordings)
+        """
+        series_channels = self.get_series_channels(group_idx, series_idx)
+        for channel in series_channels:
+            if channel["unit"] == "V" and Im_or_Vm == "Vm" or \
+                    channel["unit"] == "A" and Im_or_Vm == "Im":
+                return True
+        return False
 
     def get_stimulus_for_series(self, group_idx, series_idx):
         series_stim = stim_reader.get_stimulus_for_series(self.pul, self.pgf, group_idx, series_idx)
