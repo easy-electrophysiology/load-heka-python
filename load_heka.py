@@ -1,8 +1,8 @@
 from io import open
 import numpy as np
 import struct
-from .trees.SharedTrees import BundleHeader, BundleItems, UserParamDescrType, LockInParams_v9, AmplifierState_v9, UserParamDescrType, Description,  \
-     cstr, MarkerRootRecord, MarkerRecord, get_stim_to_dac_id, get_data_kind
+from .trees.SharedTrees import BundleHeader, BundleItems, UserParamDescrType, LockInParams_v9, AmplifierState_v9, UserParamDescrType, Description, \
+    cstr, MarkerRootRecord, MarkerRecord, get_stim_to_dac_id, get_data_kind
 from .readers import stim_reader
 from .readers import data_reader
 
@@ -161,9 +161,9 @@ class LoadHeka:
     def __exit__(self, *args):
         self.close()
 
-# ----------------------------------------------------------------------------------------------------------------------------------------------------
-# Extract headers
-# ----------------------------------------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------------------------------------------------------------
+    # Extract headers
+    # ----------------------------------------------------------------------------------------------------------------------------------------------------
 
     def _unpack_header(self, description, endian="<"):
         """
@@ -259,9 +259,9 @@ class LoadHeka:
         else:
             return item
 
-# ----------------------------------------------------------------------------------------------------------------------------------------------------
-# Unpack Tree Structure
-# ----------------------------------------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------------------------------------------------------------
+    # Unpack Tree Structure
+    # ----------------------------------------------------------------------------------------------------------------------------------------------------
 
     def _unpack_tree(self, start_bit,
                      Root, LevelTwo, LevelThree, LevelFour, LevelFive):
@@ -376,9 +376,9 @@ class LoadHeka:
         max_num_samples = max(sweep_num_samples)
         return max_num_samples
 
-# ----------------------------------------------------------------------------------------------------------------------------------------------------
-# Public_functions
-# ----------------------------------------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------------------------------------------------------------
+    # Public_functions
+    # ----------------------------------------------------------------------------------------------------------------------------------------------------
 
     def get_series_data(self, Im_or_Vm, group_idx, series_idx, include_stim_protocol=False):
         """
@@ -479,7 +479,6 @@ class LoadHeka:
 
                     out["time"][sweep_idx, :] = np.arange(max_num_samples) * ts + t_start
 
-     #               if data_exists:
                     out["data"][sweep_idx, 0:num_samples] = rec["data"]
 
                     if len(rec["data"]) < max_num_samples:
@@ -488,15 +487,9 @@ class LoadHeka:
                 else:
                     continue
 
-     #   if not data_exists:
-      #      out["data"] = None
-
-       # if np.isnan(out["time"]).all():  # TODO: this is an edge case, where stim exists but has no associated record.
-        #    out["time"] = None
-
         return out
 
-# Print Names ----------------------------------------------------------------------------------------------------------------------------------------
+    # Print Names ----------------------------------------------------------------------------------------------------------------------------------------
 
     def print_group_names(self):
         for group_idx, group in enumerate(self.pul["ch"]):
@@ -515,13 +508,15 @@ class LoadHeka:
         """
         """
         groups_and_series = {}
-        for group in self.pul["ch"]:
+        for group_idx, group in enumerate(self.pul["ch"]):
 
-            group_key = group["hd"]["GrLabel"]
+            group_key = group["hd"]["GrLabel"] + ": " + str(group_idx + 1)
 
             groups_and_series[group_key] = []
-            for series in group["ch"]:
-                groups_and_series[group_key].append(series["hd"]["SeLabel"])
+            for series_idx, series in enumerate(group["ch"]):
+
+                series_label = series["hd"]["SeLabel"] + ": " + str(group_idx + 1)
+                groups_and_series[group_key].append(series_label)
 
         return groups_and_series
 
@@ -541,7 +536,7 @@ class LoadHeka:
         channels = data_reader.get_series_channels(self.pul, group_idx, series_idx)
         return channels
 
-# Close file -----------------------------------------------------------------------------------------------------------------------------------------
+    # Close file -----------------------------------------------------------------------------------------------------------------------------------------
 
     def open(self):
         assert not self.fh, "File already open. Use close() before open()"
@@ -550,4 +545,3 @@ class LoadHeka:
     def close(self):
         self.fh.close()
         self.fh = None
-
