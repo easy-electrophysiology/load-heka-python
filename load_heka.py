@@ -515,7 +515,7 @@ class LoadHeka:
             groups_and_series[group_key] = []
             for series_idx, series in enumerate(group["ch"]):
 
-                series_label = series["hd"]["SeLabel"] + ": " + str(group_idx + 1)
+                series_label = series["hd"]["SeLabel"] + ": " + str(series_idx + 1)
                 groups_and_series[group_key].append(series_label)
 
         return groups_and_series
