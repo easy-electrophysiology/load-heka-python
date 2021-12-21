@@ -10,9 +10,9 @@ from .readers import data_reader
 OLD_VERSIONS = ["v2x65, 19-Dec-2011"]
 
 # add older version tests
+# CHECK Nan fill default with mean as option, run all load_heka tests
 # add older versions to easy electrophysiology (i.e. will it crash looking for stimulations?)
 
-# make Nan fill default with mean as option
 # update and merge
 # update on EE and send pre-release
 # update EE to be  QT = 1!
