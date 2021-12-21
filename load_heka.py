@@ -6,14 +6,28 @@ from .trees.SharedTrees import BundleHeader, BundleItems, UserParamDescrType, Lo
 from .readers import stim_reader
 from .readers import data_reader
 
+
+OLD_VERSIONS = ["v2x65, 19-Dec-2011"]
+
+# add older version tests
+# add older versions to easy electrophysiology (i.e. will it crash looking for stimulations?)
+
+# make Nan fill default with mean as option
+# update and merge
+# update on EE and send pre-release
+# update EE to be  QT = 1!
+
 def _import_trees(header):
     """
     Import the relevant tree (v9 or v1000) based on header. TODO: Probably a nicer way to do this.
     """
-    if header["oVersion"] in ["v2x90.2, 22-Nov-2016"]:  # "v2x73.5, 21-May-2015" TODO: account for different record sizes
+    if header["oVersion"] in OLD_VERSIONS:
+        from .trees import Trees_v9_pre_2x90 as Trees
+
+    elif header["oVersion"] in ["v2x90.2, 22-Nov-2016",  "v2x73.5, 21-May-2015"]:
         from .trees import Trees_v9 as Trees
 
-    elif header["oVersion"] in ["v2x90.5, 09-Apr-2019", "v2x91, 23-Feb-2021", "1.2.0 [Build 1469]"]:
+    elif header["oVersion"] in ["v2x90.5, 09-Apr-2019", "1.2.0 [Build 1469]", "v2x91, 23-Feb-2021"]:
         from .trees import Trees_v1000 as Trees
     else:
         raise Exception("Version not current supported, please contact support@easyelectrophysiology.com")
@@ -34,6 +48,8 @@ class LoadHeka:
 
     TODO:
         - not clear how to handle different TrTimeOffset for Im and Vm traces (in EE at least)
+        - cannot support "v2x73.5, 21-May-2015", HEKA new file notes are note 2.74 and SimTool verion is pre-2.73, so will need to
+          contact HEKA and get their structure information.
     """
     def __init__(self, full_filepath, only_load_header=False):
 
@@ -44,16 +60,21 @@ class LoadHeka:
         self.open()
 
         self.header = self._get_header()
+        self.version = self.header["oVersion"]
+
         assert self.header["oSignature"] == "DAT2", \
-            "Only version DAT2 onwards are supported"
+            "Version DAT1 not supported"
 
         self.Trees = _import_trees(self.header)
-        self.pgf = self._get_pgf()
         self.pul = self._get_pul()
-        self.amp = self._get_amp()
-        self.sol = self._get_sol()
-        self.mrk = self._get_mrk()
-        self.onl = self._get_onl()
+
+        if self.version not in OLD_VERSIONS:
+
+            self.pgf = self._get_pgf()
+            self.amp = self._get_amp()
+            self.sol = self._get_sol()
+            self.mrk = self._get_mrk()
+            self.onl = self._get_onl()
 
         if not only_load_header:
             self._fill_pul_recs_with_data()
@@ -259,9 +280,9 @@ class LoadHeka:
         else:
             return item
 
-    # ----------------------------------------------------------------------------------------------------------------------------------------------------
-    # Unpack Tree Structure
-    # ----------------------------------------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------------------------------------
+# Unpack Tree Structure
+# ----------------------------------------------------------------------------------------------------------------------------------------------------
 
     def _unpack_tree(self, start_bit,
                      Root, LevelTwo, LevelThree, LevelFour, LevelFive):
@@ -364,6 +385,10 @@ class LoadHeka:
         return False
 
     def get_stimulus_for_series(self, group_idx, series_idx):
+
+        if self.version in OLD_VERSIONS:
+            raise Exception("Stimulus reconstruction for versions before 2x90 are not supported")
+
         series_stim = stim_reader.get_stimulus_for_series(self.pul, self.pgf, group_idx, series_idx)
         return series_stim
 
@@ -376,18 +401,17 @@ class LoadHeka:
         max_num_samples = max(sweep_num_samples)
         return max_num_samples
 
-    # ----------------------------------------------------------------------------------------------------------------------------------------------------
-    # Public_functions
-    # ----------------------------------------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------------------------------------
+# Public_functions
+# ----------------------------------------------------------------------------------------------------------------------------------------------------
 
-    def get_series_data(self, Im_or_Vm, group_idx, series_idx, include_stim_protocol=False):
+    def get_series_data(self, Im_or_Vm, group_idx, series_idx, include_stim_protocol=False, fill_with_mean=False):
         """
         Convenience function to extract Im or Vm channel data from a series. If the data has not already been loaded into memeory,
         it will be loaded into the pulse tree prior to beign returned in a more convenient form with this method. Output is in
         s, pA, mV.
 
         Note this function will not work if the requested series data is not loaded into the pulse tree and the file is then closed.
-
 
         Logic: in some instances the data for a channel will not exist, however the stimulus protocol still will and a
                pulse record will exist for it. As such we need to act like the data exists and collect all other information
@@ -402,13 +426,17 @@ class LoadHeka:
 
             include_stim_protocol - also return the series stimulation protocol generated from the StimTree.
 
+            fill_with_mean - by default, if sweep data is smaller than others in the series, it will be padded with NaN. This option
+                             will override this and set as the mean of the trace.
+
         OUTPUTS:
             dictionary of parameters (see out below). For each sweep, the parameter value is appended to a list. This is somewhat redundant
             as many of these parameters are checked that they are equal in check_sweep_params_are_equal_for_every_series_in_file(). However
             while verbose this is kept for now as the HEKA filetype is very dynamic, and better to be clearer incase of unxpected edge cases.
 
             As well as relevant parameters for the record, the "data" field contains a sweep x num samples numpy array of all sweeps from the series. If
-            a sweep has less samples in it than the others, the end of the row will be padded with the average of the existing data.
+            a sweep has less samples in it than the others, the end of the row will be padded with Nan (unless fill_with_mean is set, in which
+            case it will be filled with the average of the existing data).
 
             If include_stim_protocol is True, the "stim" field will contain a sweep x stimulation numpy array containing the fill
             stim protocol for the series. see stim_reader.py for details on supported stimulation protocols. If the StimTree cannot
@@ -482,6 +510,7 @@ class LoadHeka:
                     out["data"][sweep_idx, 0:num_samples] = rec["data"]
 
                     if len(rec["data"]) < max_num_samples:
+                        fill = np.mean(rec["data"]) if fill_with_mean else np.nan
                         out["data"][sweep_idx, num_samples:] = np.mean(rec["data"])
 
                 else:

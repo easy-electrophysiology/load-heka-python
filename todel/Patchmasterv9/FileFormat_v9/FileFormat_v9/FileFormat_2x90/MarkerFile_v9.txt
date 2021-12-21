@@ -1,0 +1,37 @@
+
+                                          PatchMaster v2.74, 21-Jan-2014
+
+   SizeByte             = 1;
+   SizeChar             = 1;
+   SizeEnum             = 1;
+   SizeBoolean          = 1;
+   SizeInt16            = 2;
+   SizeCard16           = 2;
+   SizeSet16            = 2;
+   SizeInt32            = 4;
+   SizeCard32           = 4;
+   SizeReal             = 4;
+   SizeLongReal         = 8;
+
+   String80Size         = 80;
+
+   RootLevel            = 0;
+   MarkerLevel          = 1;
+
+   MarkerType           = ( MarkerGeneral,
+                            MarkerSolutionIndex,
+                            MarkerSolutionValue );
+
+   (* MarkerRecord      = RECORD *)
+   MaMarkerTime         =   0; (* LONGREAL *)
+   MaMarkerText         =   8; (* String80Type *)
+   MaMarkerTrace        =  88; (* INT32 *)
+   MaMarkerKind         =  92; (* BYTE *)
+      MaFiller          =  93; (* 7 *)
+   MaCRC                = 100; (* CARD32 *)
+   MarkerRecSize        = 104;      (* = 13 * 8 *)
+
+   (* RootRecord        = RECORD *)
+   RoVersion            =   0; (* INT32 *)
+   RoCRC                =   4; (* CARD32 *)
+   RootRecSize          =   8;   (* = 1 * 8 *)
