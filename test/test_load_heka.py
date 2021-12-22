@@ -167,7 +167,10 @@ class TestSeries:
                                                                                                                   self.group_num,
                                                                                                                   self.series_num,
                                                                                                                   self.im_or_vm))
-            self.handle_assert(mean_dp, "mean_dp_match")
+            try:
+                self.handle_assert(mean_dp, "mean_dp_match")
+            except:
+                breakpoint()
 
     def print_percent_over_deminal_place_match(self, sweeps_percent_close):
         """
