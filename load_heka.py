@@ -15,7 +15,7 @@ def _import_trees(header):
     if header["oVersion"] in OLD_VERSIONS:
         from .trees import Trees_v9_pre_2x90 as Trees
 
-    elif header["oVersion"] in ["v2x90.2, 22-Nov-2016",  "v2x73.5, 21-May-2015"]:
+    elif header["oVersion"] in ["v2x90.2, 22-Nov-2016"]:
         from .trees import Trees_v9 as Trees
 
     elif header["oVersion"] in ["v2x90.5, 09-Apr-2019", "1.2.0 [Build 1469]", "v2x91, 23-Feb-2021"]:
