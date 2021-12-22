@@ -1,10 +1,13 @@
 from io import open
 import numpy as np
 import struct
-from .trees.SharedTrees import BundleHeader, BundleItems, UserParamDescrType, LockInParams_v9, AmplifierState_v9, UserParamDescrType, Description, \
+from trees.SharedTrees import BundleHeader, BundleItems, UserParamDescrType, LockInParams_v9, AmplifierState_v9, UserParamDescrType, Description, \
     cstr, MarkerRootRecord, MarkerRecord, get_stim_to_dac_id, get_data_kind
-from .readers import stim_reader
-from .readers import data_reader
+from readers import stim_reader
+from readers import data_reader
+import warnings
+warnings.simplefilter('always',
+                      UserWarning)
 
 OLD_VERSIONS = ["v2x65, 19-Dec-2011"]
 
@@ -13,13 +16,13 @@ def _import_trees(header):
     Import the relevant tree (v9 or v1000) based on header. TODO: Probably a nicer way to do this.
     """
     if header["oVersion"] in OLD_VERSIONS:
-        from .trees import Trees_v9_pre_2x90 as Trees
+        from trees import Trees_v9_pre_2x90 as Trees
 
     elif header["oVersion"] in ["v2x90.2, 22-Nov-2016"]:
-        from .trees import Trees_v9 as Trees
+        from trees import Trees_v9 as Trees
 
     elif header["oVersion"] in ["v2x90.5, 09-Apr-2019", "1.2.0 [Build 1469]", "v2x91, 23-Feb-2021"]:
-        from .trees import Trees_v1000 as Trees
+        from trees import Trees_v1000 as Trees
     else:
         raise Exception("Version not current supported, please contact support@easyelectrophysiology.com")
 
@@ -378,7 +381,8 @@ class LoadHeka:
     def get_stimulus_for_series(self, group_idx, series_idx):
 
         if self.version in OLD_VERSIONS:
-            raise Exception("Stimulus reconstruction for versions before 2x90 are not supported")
+            warnings.warn("Stimulus reconstruction for versions before 2x90 is not supported")
+            return False
 
         series_stim = stim_reader.get_stimulus_for_series(self.pul, self.pgf, group_idx, series_idx)
         return series_stim
