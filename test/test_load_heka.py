@@ -3,7 +3,7 @@ import numpy as np
 from load_heka import LoadHeka
 from os.path import join
 
-def test_heka_reader(base_path, version, group_series_to_test, dp_thr=1e-6, info_type="mean_dp_match", assert_mode=False):
+def test_heka_reader(base_path, version, group_series_to_test, dp_thr=1e-6, info_type="mean_dp_match", assert_mode=False, include_stim_protocol=True):
     """
     Test the data read my LoadHeka matches the the data when loading into Patchmaster. Data must be exported from Patchmaster
     using 'Export Sweep' as ascii for comparison with LoadHeka. See the main README.md (section 5) on details
@@ -55,7 +55,8 @@ def test_heka_reader(base_path, version, group_series_to_test, dp_thr=1e-6, info
             load_heka = heka_file.get_series_data(im_or_vm,
                                                   int(group_num) - 1,
                                                   int(series_num) - 1,
-                                                  include_stim_protocol=True)
+                                                  include_stim_protocol=include_stim_protocol,
+                                                  fill_with_mean=True)
             test = TestSeries(raw_heka,
                               load_heka,
                               group_num,
@@ -272,7 +273,7 @@ class TestSeries:
         if self.assert_mode:
 
             if test_type == "mean_dp_match":
-                assert param > 4, "Mean difference from Patchmaster is more than 5 decimal places"
+                assert param > 4, "Mean difference from Patchmaster is more than 4 decimal places"
 
             elif test_type == "perc_dp_match":
                 assert param > 99, "Less that 99% of samples are mode that {0} decimal places from Patchmaster".format(self.dp_thr)
@@ -415,6 +416,8 @@ def read_heka_test_ascii(full_filepath):
 
             if "Time" in line:
                 cols = line
+                idx_col_present = True if "Index" in cols else False
+                stim_present = True if "Stimulus" in cols else False
                 continue
 
             elif "Series" in line:
@@ -433,11 +436,12 @@ def read_heka_test_ascii(full_filepath):
 
                     sweep = make_empty_param_dict()
             else:
-                if "[A]" in cols.split(",")[1]:
-                    save_line_to_sweep_dict(line, sweep, first="Im", second="Vm")
+                idx_col_offset = 1 if idx_col_present else 0
+                if "[A]" in cols.split(",")[1 + idx_col_offset]:
+                    save_line_to_sweep_dict(line, sweep, first="Im", second="Vm", idx_col_present=idx_col_present, stim_present=stim_present)
 
-                elif "[V]" in cols.split(",")[1]:
-                    save_line_to_sweep_dict(line, sweep, first="Vm", second="Im")
+                elif "[V]" in cols.split(",")[1 + idx_col_offset]:
+                    save_line_to_sweep_dict(line, sweep, first="Vm", second="Im", idx_col_present=idx_col_present, stim_present=stim_present)
                 else:
                     raise Exception("ascii col not recognised")
 
@@ -445,7 +449,7 @@ def read_heka_test_ascii(full_filepath):
 
         return results
 
-def save_line_to_sweep_dict(line, sweep, first, second):
+def save_line_to_sweep_dict(line, sweep, first, second, idx_col_present, stim_present):
     """
     The output ascii will have either 3 or 6 columns, depending on whether Im and Vm or just Im or Vm records are present.
     They can be in either order (e.g. first 3 cols Vm)
@@ -453,20 +457,40 @@ def save_line_to_sweep_dict(line, sweep, first, second):
     Here save the Im and Vm to the approrpiate fields in the dict accounting for whether Im or Vm is first
     """
     split_line = line.strip().split(",")
-    line_time_first, line_first, line_stim_first = split_line[0:3]
-    sweep["time_" + first].append(float(line_time_first))
-    sweep[first].append(float(line_first))
-    sweep["stim_" + first].append(float(line_stim_first))
+    handle_line(sweep, split_line,
+                start_idx=0, stop_idx=3, label=first,
+                idx_col_present=idx_col_present, stim_present=stim_present)
 
     if len(split_line) > 3:
-        line_time_second, line_second, line_stim_second = split_line[3:6]
-        sweep["time_" + second].append(float(line_time_second))
-        sweep[second].append(float(line_second))
-        sweep["stim_" + second].append(float(line_stim_second))
+        handle_line(sweep, split_line,
+                    start_idx=3, stop_idx=6, label=second,
+                    idx_col_present=idx_col_present, stim_present=stim_present)
+
     else:
         sweep["time_" + second].append(np.nan)
         sweep[second].append(np.nan)
         sweep["stim_" + second].append(np.nan)
+
+
+def handle_line(sweep, split_line, start_idx, stop_idx, label, idx_col_present, stim_present):
+    """
+    For file versions >2x90, there is no index column and we can open in Patchamsdter so export with stimulus.
+    For older versions, there is a leading index coloumn and stimulus does not always export.
+    This handles both cases here, indexing into the read line appropriately.
+    """
+    if idx_col_present and not stim_present:
+        idx_offset = 1
+        stim_offset = 0 if stop_idx == 3 else -1
+
+        line_time, line_data = split_line[start_idx + stim_offset + idx_offset: stop_idx + stim_offset]
+        line_stim = np.nan
+
+    elif not idx_col_present and stim_present:
+        line_time, line_data, line_stim = split_line[start_idx:stop_idx]
+
+    sweep["time_" + label].append(float(line_time))
+    sweep[label].append(float(line_data))
+    sweep["stim_" + label].append(float(line_stim))
 
 def update_results_with_sweep(results, sweep):
     for key, value in sweep.items():

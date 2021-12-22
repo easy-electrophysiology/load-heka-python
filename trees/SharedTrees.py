@@ -190,13 +190,21 @@ def get_seg_store_type(byte):
             "SegStoreEnd"][byte]
 
 def get_recording_mode(byte):
-    return ["InOut",
-            "OnCell",
-            "OutOut",
-            "WholeCell",
-            "CClamp",
-            "VClamp",
-            "NoMode"][byte]
+
+    try:
+        mode = ["InOut",
+                "OnCell",
+                "OutOut",
+                "WholeCell",
+                "CClamp",
+                "VClamp",
+                "NoMode"][byte]
+
+    except IndexError:
+
+        mode = "not recognised"
+
+    return mode
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------
 # Header_v9
