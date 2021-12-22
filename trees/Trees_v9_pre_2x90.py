@@ -1,6 +1,6 @@
 
 import numpy as np
-from .SharedTrees import cstr, get_fmt, Description, get_data_kind, get_recording_mode, AmplifierState_v9, UserParamDescrType, LockInParams_v9   # TODO: CHECK THESE STILL WORK
+from .SharedTrees import cstr, get_fmt, Description, get_data_kind, get_recording_mode, AmplifierState_v9, UserParamDescrType, LockInParams_v9
 
 class TraceRecord(Description):
     def __init__(self, n=1):
@@ -18,11 +18,7 @@ class TraceRecord(Description):
             ("TrLeakID",                "i"),                       # (* INT32 *)
             ("TrLeakTraces",            "i"),                       # (* INT32 *)
             ("TrDataKind",              "h",     get_data_kind),    # (* SET16 *)
-
             ("TrFiller1",               "h"),
-#            ("TrUseXStart",             "?"),                       # (* BOOLEAN *)
- #           ("TrTcKind",                "b"),                       # (* BYTE *)
-
             ("TrRecordingMode",         "b",     get_recording_mode),  # (* BYTE *)
             ("TrAmplIndex",             "c"),                       # (* CHAR *)
             ("TrDataFormat",            "b"),                       # (* BYTE *)
@@ -33,9 +29,7 @@ class TraceRecord(Description):
             ("TrYUnit",                 "8s",        cstr),         # (* String8Type *)
             ("TrXInterval",             "d"),                       # (* LONGREAL *)
             ("TrXStart",                "d"),                       # (* LONGREAL *)
-
             ("TrXUnit",                 "8s",        cstr),         # (* String8Type *)
-
             ("TrYRange",                "d"),                       # (* LONGREAL *)
             ("TrYOffset",               "d"),                       # (* LONGREAL *)
             ("TrBandwidth",             "d"),                       # (* LONGREAL *)

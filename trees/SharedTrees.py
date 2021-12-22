@@ -206,15 +206,6 @@ def get_recording_mode(byte):
 
     return mode
 
-
-  #  return ["InOut",
-   #         "OnCell",
-    #        "OutOut",
-     #       "WholeCell",
-      #      "CClamp",
-       #     "VClamp",
-        #    "NoMode"][byte]
-
 # ----------------------------------------------------------------------------------------------------------------------------------------------------
 # Header_v9
 
