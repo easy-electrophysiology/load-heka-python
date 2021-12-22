@@ -5,6 +5,9 @@ from .trees.SharedTrees import BundleHeader, BundleItems, UserParamDescrType, Lo
     cstr, MarkerRootRecord, MarkerRecord, get_stim_to_dac_id, get_data_kind
 from .readers import stim_reader
 from .readers import data_reader
+import warnings
+warnings.simplefilter('always',
+                      UserWarning)
 
 OLD_VERSIONS = ["v2x65, 19-Dec-2011"]
 
@@ -378,7 +381,8 @@ class LoadHeka:
     def get_stimulus_for_series(self, group_idx, series_idx):
 
         if self.version in OLD_VERSIONS:
-            raise Exception("Stimulus reconstruction for versions before 2x90 are not supported")
+            warnings.warn("Stimulus reconstruction for versions before 2x90 is not supported")
+            return False
 
         series_stim = stim_reader.get_stimulus_for_series(self.pul, self.pgf, group_idx, series_idx)
         return series_stim
