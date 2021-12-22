@@ -167,10 +167,7 @@ class TestSeries:
                                                                                                                   self.group_num,
                                                                                                                   self.series_num,
                                                                                                                   self.im_or_vm))
-            try:
-                self.handle_assert(mean_dp, "mean_dp_match")
-            except:
-                breakpoint()
+            self.handle_assert(mean_dp, "mean_dp_match")
 
     def print_percent_over_deminal_place_match(self, sweeps_percent_close):
         """
@@ -446,7 +443,6 @@ def read_heka_test_ascii(full_filepath):
                 elif "[V]" in cols.split(",")[1 + idx_col_offset]:
                     save_line_to_sweep_dict(line, sweep, first="Vm", second="Im", idx_col_present=idx_col_present, stim_present=stim_present)
                 else:
-                    breakpoint()
                     raise Exception("ascii col not recognised")
 
         update_results_with_sweep(results, sweep)  # get final sweep_idx
