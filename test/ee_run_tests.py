@@ -1,5 +1,7 @@
-# from test.test_load_heka import test_heka_reader
-from test.test_load_heka import test_heka_reader
+import sys
+sys.path.append(r"C:\fMRIData\git-repo\load-heka-python")
+
+from test_load_heka import test_heka_reader
 from os.path import join
 
 ASSERT_MODE = True

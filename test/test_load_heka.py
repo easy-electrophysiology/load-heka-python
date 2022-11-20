@@ -1,6 +1,6 @@
 import warnings
 import numpy as np
-from load_heka import LoadHeka
+from load_heka.load_heka import LoadHeka
 from os.path import join
 
 def test_heka_reader(base_path, version, group_series_to_test, dp_thr=1e-6, info_type="mean_dp_match", assert_mode=False, include_stim_protocol=True):
