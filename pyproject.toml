@@ -1,0 +1,28 @@
+[project]
+name = "load-heka-python"
+authors = [
+    {name = "Easy Electrophysiology", email = "support@easyelectrophysiology.com"},
+]
+description = "Load HEKA files created by PatchMaster software into Python."
+readme = "README.md"
+requires-python = ">=3.8.0"
+dynamic = ["version"]
+license = {text = "MIT"}
+
+dependencies = [
+    "numpy",
+]
+
+[build-system]
+requires = [
+    "setuptools>=45",
+    "wheel",
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["load_heka_python*"]
+exclude = ["tests*"]
