@@ -32,6 +32,10 @@ The HEKA file loader can be used directly or with a context manager:
 
 Directly:
 ```
+from load_heka_python.load_heka import LoadHeka
+
+full_path_to_file = r"C:\path\to\a\file.dat"
+
 heka_file = LoadHeka(full_path_to_file) 
 series_data = heka_file.get_series_data("Vm", group_idx=0, series_idx=0)
 heka_file.close()
