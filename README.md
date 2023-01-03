@@ -26,6 +26,8 @@ before specifying which series data to load, see section 3).
 
 ### Getting Started
 
+To install, clone the github repo. Change directory to the repo and type `pip install .` to install the package.
+
 The HEKA file loader can be used directly or with a context manager:
 
 Directly:
