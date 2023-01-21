@@ -5,7 +5,7 @@ authors = [
 ]
 description = "Load HEKA files created by PatchMaster software into Python."
 readme = "README.md"
-requires-python = ">=3.8.0"
+requires-python = ">=3.7.0"
 dynamic = ["version"]
 license = {text = "MIT"}
 
