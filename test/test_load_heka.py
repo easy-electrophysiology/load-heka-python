@@ -1,21 +1,21 @@
 import warnings
 import numpy as np
-from load_heka.load_heka import LoadHeka
+from load_heka_python.load_heka import LoadHeka
 from os.path import join
 
 def test_heka_reader(base_path, version, group_series_to_test, dp_thr=1e-6, info_type="mean_dp_match", assert_mode=False, include_stim_protocol=True):
     """
-    Test the data read my LoadHeka matches the the data when loading into Patchmaster. Data must be exported from Patchmaster
+    Test the data read my LoadHeka matches the data when loading into Patchmaster. Data must be exported from Patchmaster
     using 'Export Sweep' as ascii for comparison with LoadHeka. See the main README.md (section 5) on details
-    on the file organisation and Export sweep options expceted by this function.
+    on the file organisation and Export sweep options expected by this function.
 
     Note that all tests are conducted with units scaled to pA, mV, s.
 
     This test function is a little unusual as by default it does not assert to an exact match between the data and Patchmaster.
     For reasons that are not currently clear (have emailed HEKA) the Im and Vm data does not match the exported HEKA sweep
-    perfectly, but usually to around ~5 d.p. This varies a little between series. While this percision is sufficient, it would
+    perfectly, but usually to around ~5 d.p. This varies a little between series. While this precision is sufficient, it would
     be nice if they matched perfectly, and we could test with assert to 7 d.p. (similar to time and stimulus protocol, which are
-    not effected by this issue). Because of this, optiosn to print the average decimal place match, or the % of samples
+    not effected by this issue). Because of this, options to print the average decimal place match, or the % of samples
     that match to dp_thr decimal places is provided.
 
     base_path - path to the test directory (see README.md)
@@ -35,7 +35,7 @@ def test_heka_reader(base_path, version, group_series_to_test, dp_thr=1e-6, info
                 "assert_dp_match" - raise exception if any sample does not match Patchmaster to dp_thr decimal places or more
 
     assert_mode - Tests are usually printed so the results for all series are run. However, if assert_mode is True, an exception will be
-                  raised if data and Patchmaster do not matched to pre-set cutoff values (see TestSeries().handle_assert() for details.
+                  raised if data and Patchmaster do not match to pre-set cutoff values (see TestSeries().handle_assert() for details.
     """
     print("Testing " + version + "----------------------------------------------------------------------------------------------------------------\n")
 
@@ -79,7 +79,7 @@ def test_heka_reader(base_path, version, group_series_to_test, dp_thr=1e-6, info
 class TestSeries:
     def __init__(self, raw_heka, load_heka, group_num, series_num, dp_thr, im_or_vm, info_type, assert_mode, supress_time, supress_stim):
         """
-        Class to test the Data (Im or Vm), reconstructued stimulus and time against exported Patchmaster data. Data is converted to pA
+        Class to test the Data (Im or Vm), reconstructed stimulus and time against exported Patchmaster data. Data is converted to pA
         and mV. For a reason that is not clear, the output of the Im and Vm data does not match HEKA perfectly, but to around 5 decimal
         places on average. This precision is sufficient but we have emailed HEKA to check if any additional settings are causing
         this slight difference. See test_heka_reader() for details.
