@@ -210,7 +210,7 @@ Notes on exporting from HEKA:
 2) make sure Display filter is off
 3) Ensure data is displayed with subtract Zero on
 4) export 1 series at a time
-5) In general select 'Data' > 'Export Full Trace' to ignore the way the trace is dispayed on the graph (i.e. if it is zoomed in)
+5) In general select 'Data' > 'Export Full Sweep' to ignore the way the trace is dispayed on the graph (i.e. if it is zoomed in)
 6) for very long stimuli, the entire record is not exported by default. To export the full record, go to:
     oscl button > Manual X-range > set the X range to the full record time
     use 'Export' (NOT 'Export Full Sweep' which for some reason does not work in this case)
