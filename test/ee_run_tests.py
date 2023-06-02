@@ -82,6 +82,21 @@ def test_f10_v2x91(base_path):
     group_num_series_num_to_test = [["1", "1"], ["1", "3"], ["1", "5"], ["1", "9"]]
     test_heka_reader(base_path, version, group_num_series_num_to_test, assert_mode=ASSERT_MODE)
 
+def test_f11_v2x90_3(base_path):
+    """
+    This is an annoying file that is offset by 0.05 s in the software (x_start = 0.05) but
+    cannot export it in such a way that it is relative to the sweep but maintains
+    the 0.05 s offset - the software is correcting it somewhere but not making the
+    option to turn off correction available (at least that I could find.
+    Nonetheless Vm is loading well so keep here as a successful test.
+
+    There is also a problem with the stimulus, which is all zeros in the
+    file but was loading with array dimension longer than the time of the recording
+    in load_heka, so is loaded as False.
+    """
+    version = "f11_v2x90.3"
+    group_num_series_num_to_test = [["1", "1"], ["1", "2"], ["1", "4"], ["1", "11"], ["1", "12"]]
+    test_heka_reader(base_path, version, group_num_series_num_to_test, assert_mode=False, include_stim_protocol=False)
 
 test_f1_v2x90_2(TEST_PATH)
 test_f2_v2x90_2(TEST_PATH)
@@ -93,3 +108,4 @@ f7_1_2_0_build_1469(TEST_PATH)
 test_f8_v2x65(TEST_PATH)
 test_f9_v2x65(TEST_PATH)
 test_f10_v2x91(TEST_PATH)
+test_f11_v2x90_3(TEST_PATH)

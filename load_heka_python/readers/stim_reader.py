@@ -84,6 +84,8 @@ def check_data(data, sweep, num_sweeps_in_recorded_data):
 
     assert num_sweeps_in_recorded_data == data.shape[0], "reconstructed stimulus size cannot be made equal to recorded number of sweeps"
 
+    return True
+
 def read_segments_into_classes(dac, info):
     """
     Ignore unstored (i.e. unused) segments
