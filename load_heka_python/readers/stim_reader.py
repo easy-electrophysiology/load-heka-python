@@ -25,7 +25,8 @@ def get_stimulus_for_series(pul, pgf, group_idx, series_idx):
 
     data = create_stimulus_waveform_from_segments(segments, info, num_sweeps_in_recorded_data)
 
-    check_data(data, pul_sweep, num_sweeps_in_recorded_data)
+    if not check_data(data, pul_sweep, num_sweeps_in_recorded_data):
+        return False
 
     info["data"] = data
     return info
@@ -76,7 +77,11 @@ def check_header(dac):
 
 def check_data(data, sweep, num_sweeps_in_recorded_data):
     rec_num_samples = sweep["ch"][0]["hd"]["TrDataPoints"]
-    assert rec_num_samples == data.shape[1], "reconstructed stimulis size is not the same as corresponding pulse tree record"
+    if rec_num_samples != data.shape[1]:
+        warnings.warn("Reconstructed stimulis size is not the same as corresponding pulse tree record."
+                      "Stimulus will be disregarded.")
+        return False
+
     assert num_sweeps_in_recorded_data == data.shape[0], "reconstructed stimulus size cannot be made equal to recorded number of sweeps"
 
 def read_segments_into_classes(dac, info):
