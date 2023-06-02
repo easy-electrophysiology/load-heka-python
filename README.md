@@ -181,7 +181,7 @@ v9:
 	v2x90
 	v2x90.1
 	v2x90.2  - tested 
-	v2x90.3
+	v2x90.3 - tested
 
 v1000
 	v2x90.4
