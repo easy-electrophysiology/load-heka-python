@@ -84,7 +84,7 @@ def test_f10_v2x91(base_path):
 
 def test_f11_v2x90_3(base_path):
     """
-    This is an annoying file that is offset by 0.05 s in the software (x_start = 0.05) but
+    This is an annoying file that is offset by 0.005 s in the software (x_start = 0.005) but
     cannot export it in such a way that it is relative to the sweep but maintains
     the 0.05 s offset - the software is correcting it somewhere but not making the
     option to turn off correction available (at least that I could find.
