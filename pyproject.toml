@@ -24,4 +24,4 @@ build-backend = "setuptools.build_meta"
 include-package-data = true
 
 [tool.setuptools.packages.find]
-include = ["load_heka_python*", "tests*"]
+include = ["load_heka_python*"]
