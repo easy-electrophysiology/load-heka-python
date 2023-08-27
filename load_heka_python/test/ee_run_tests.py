@@ -68,11 +68,13 @@ def f7_1_2_0_build_1469(base_path):
     test_heka_reader(base_path, version, group_num_series_num_to_test, assert_mode=ASSERT_MODE)
 
 def test_f8_v2x65(base_path):
+    """Stimulus reconstruction for versions before 2x90 is not supported"""
     version = "f8_v2x65"
     group_num_series_num_to_test = [["1", "6"], ["1", "13"], ["3", "1"]]
     test_heka_reader(base_path, version, group_num_series_num_to_test, assert_mode=ASSERT_MODE, include_stim_protocol=False)
 
 def test_f9_v2x65(base_path):
+    """Stimulus reconstruction for versions before 2x90 is not supported"""
     version = "f9_v2x65"
     group_num_series_num_to_test = [["1", "1"], ["1", "2"]]
     test_heka_reader(base_path, version, group_num_series_num_to_test, assert_mode=ASSERT_MODE, include_stim_protocol=False)
@@ -87,15 +89,28 @@ def test_f11_v2x90_3(base_path):
     This is an annoying file that is offset by 0.005 s in the software (x_start = 0.005) but
     cannot export it in such a way that it is relative to the sweep but maintains
     the 0.05 s offset - the software is correcting it somewhere but not making the
-    option to turn off correction available (at least that I could find.
+    option to turn off correction available (at least that I could find).
+    This is not a severe issue for our tests as the time is read correctly, just
+    the offset is not automatically removed (as it is in HEKA).
     Nonetheless Vm is loading well so keep here as a successful test.
 
     There is also a problem with the stimulus, which is all zeros in the
     file but was loading with array dimension longer than the time of the recording
-    in load_heka, so is loaded as False.
+    in load_heka, so is loaded as False. This is most likely due to manually stopping
+    the recording before it has finished.
     """
     version = "f11_v2x90.3"
     group_num_series_num_to_test = [["1", "1"], ["1", "2"], ["1", "4"], ["1", "11"], ["1", "12"]]
+    test_heka_reader(base_path, version, group_num_series_num_to_test, assert_mode=False, include_stim_protocol=False)
+
+def test_f12_v2x90_4(base_path):
+    """
+    The same issue with som stimulus reconstruction as described above is observed on this
+    test file. However, most stimulus are reconstructed successfully, further suggesting it
+    is a problem with manually stopping the recording too quickly.
+    """
+    version = "f12_v2x90.4"
+    group_num_series_num_to_test = [["1", "1"], ["1", "3"], ["1", "5"], ["3", "3"]]
     test_heka_reader(base_path, version, group_num_series_num_to_test, assert_mode=False, include_stim_protocol=False)
 
 test_f1_v2x90_2(TEST_PATH)
@@ -109,3 +124,4 @@ test_f8_v2x65(TEST_PATH)
 test_f9_v2x65(TEST_PATH)
 test_f10_v2x91(TEST_PATH)
 test_f11_v2x90_3(TEST_PATH)
+test_f12_v2x90_4(TEST_PATH)
