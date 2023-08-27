@@ -175,20 +175,17 @@ Unsupported: pre version v2x00. These are DAT1 (unbundled filetypes). These can 
 
 Unsupported / Untested: v2x00-v2x05, v2x10-v2x15, v2x20, v2x30-v2x35, v2x40-v2x43, v2x52-v2x53, v2x60-v2x60, v2x71-v2x73, v2x80.
 
-To support and test:
+Supported and test:
 ```
 v9:
-	v2x90
-	v2x90.1
-	v2x90.2  - tested 
-	v2x90.3 - tested
+	v2x90.2
+	v2x90.3
 
 v1000
-	v2x90.4
-	v2x90.5   - tested 
-	v2x91
-	v1.2   - tested ([build 1469])
-	v1.3
+	v2x90.4 
+	v2x90.5 
+	v2x91 
+	v1.2  
 ```
 ## 5) Testing Your Files
 
@@ -207,11 +204,11 @@ e.g. if your filename is test_file.dat
 Notes on exporting from HEKA:
 
 1) Go to 'Tweak' > 'Export' and make sure 'text' output is selected and 'stimulus' box is checked. 
-2) make sure Display filter is off
-3) Ensure data is displayed with subtract Zero on
-4) export 1 series at a time
-5) In general select 'Data' > 'Export Full Sweep' to ignore the way the trace is dispayed on the graph (i.e. if it is zoomed in)
-6) for very long stimuli, the entire record is not exported by default. To export the full record, go to:
+2) Make sure Display filter is off.
+3) Ensure data is displayed with 'Subtract Zero Offset' on.
+4) Export 1 series at a time.
+5) In general select 'Data' > 'Export Full Sweep' to ignore the way the trace is dispayed on the graph (i.e. if it is zoomed in).
+6) For very long stimuli, the entire record is not exported by default. To export the full record, go to:
     oscl button > Manual X-range > set the X range to the full record time
     use 'Export' (NOT 'Export Full Sweep' which for some reason does not work in this case)
 
