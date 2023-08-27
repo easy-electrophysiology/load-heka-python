@@ -11,11 +11,11 @@
 This module will load HEKA files created by PatchMaster software into Python. Note this module
 is still in the testing phase, please see section 4 and 5 for details. 
 
-Much guidance has been gained from Luke Campagnola's Heka Reader (https://github.com/campagnola/heka_reader) 
+Much guidance has been gained from Luke Campagnola's [Heka Reader](https://github.com/campagnola/heka_reader) 
 with a few code snippets and functions included with permission. 
-Inspiration has also been taken from Christian Keine / Sammy Katta's MATLAB HEKA loading modules (https://www.mathworks.com/matlabcentral/fileexchange/70164-heka-patchmaster-importer).
+Inspiration has also been taken from Christian Keine / Sammy Katta's [MATLAB HEKA loading modules](https://www.mathworks.com/matlabcentral/fileexchange/70164-heka-patchmaster-importer).
 
-We would also like to acknowledge Stimfits HEKA module (https://github.com/neurodroid/stimfit) and SigTools module (https://pubmed.ncbi.nlm.nih.gov/19056423/)
+We would also like to acknowledge [Stimfits HEKA module](https://github.com/neurodroid/stimfit) and [SigTools module](https://pubmed.ncbi.nlm.nih.gov/19056423/)
 on which the above examples were based, and HEKA for their detailed documentation on the filetype, available the network drive: server.hekahome.de
 
 ## 2) Usage Instructions
