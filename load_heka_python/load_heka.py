@@ -21,7 +21,8 @@ def _import_trees(header):
     elif header["oVersion"] in ["v2x90.2, 22-Nov-2016"]:
         from .trees import Trees_v9 as Trees
 
-    elif header["oVersion"] in ["v2x90.3, 19-Mar-2018", "v2x90.4, 30-Oct-2018", "v2x90.5, 09-Apr-2019", "1.2.0 [Build 1469]", "v2x91, 23-Feb-2021"]:
+    elif header["oVersion"] in ["v2x90.3, 19-Mar-2018", "v2x90.4, 30-Oct-2018", "v2x90.5, 09-Apr-2019",
+                                "1.2.0 [Build 1469]", "v2x91, 23-Feb-2021", "v2x92, 23-February-2023"]:
         from .trees import Trees_v1000 as Trees
     else:
         raise Exception("Version not current supported, please contact support@easyelectrophysiology.com")

@@ -21,10 +21,30 @@ def fill_pul_with_data(pul, fh, group_idx, series_idx):
 
             fmt, size, np_dtype, __ = get_dataformat(rec["hd"]["TrDataFormat"])
 
-            fh.seek(start)
-            data = struct.unpack(endian + fmt * length,
-                                 fh.read(size * length))
-            data = np.array(data, dtype=np_dtype)
+            interleave_size = rec["hd"]["TrInterleaveSize"]
+            if interleave_size != 0:
+                assert interleave_size % size == 0, ("`size` does not divide "
+                                                     "evenly `interleave size")
+
+                batch_size = int(interleave_size / size)
+
+                assert length % batch_size == 0, ("`length` does not divide "
+                                                  "evenly `batch_size size")
+                n_batches = int(length / batch_size)
+
+                data = np.zeros((n_batches * batch_size)).astype(np_dtype)
+
+                for chunk in range(n_batches):
+                    fh.seek(start)
+                    chunk_data = struct.unpack(endian + fmt * batch_size,
+                                               fh.read(size * batch_size))
+                    data[chunk * batch_size: chunk * batch_size + batch_size] = np.array(chunk_data, dtype=np_dtype)
+                    start += rec["hd"]["TrInterleaveSkip"]
+            else:
+                fh.seek(start)
+                data = struct.unpack(endian + fmt * length,
+                                     fh.read(size * length))
+                data = np.array(data, dtype=np_dtype)
 
             # Scale and recast to float64
             if np_dtype in [np.int16, np.int32]:
@@ -38,18 +58,15 @@ def fill_pul_with_data(pul, fh, group_idx, series_idx):
 
             run_checks(rec, data, data_kind)
 
+
+
+
 def run_checks(rec, data, data_kind):
     """
     """
     assert data_kind["IsLittleEndian"], "big endian data not tested"
     assert not data_kind["IsLeak"], "isLeak channels not tested"
     assert not data_kind["IsVirtual"], "isVirtual channels not tested"
-
-    # Checks Interleave - Not Tested Yet
-    interleave_size = rec["hd"]["TrInterleaveSize"]
-    interleave_skip1 = rec["hd"]["TrInterleaveSkip"]
-    interleave_skip2 = rec["hd"]["TrInterleaveSkip"]
-    assert interleave_size == 0, "Interleave not tested"
 
     # Ensure assumptions are all true for the forseeable future, test these when counter examples come up
     assert rec["hd"]["TrDataPoints"] == len(data)
