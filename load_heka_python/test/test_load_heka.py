@@ -3,7 +3,7 @@ import numpy as np
 from load_heka_python.load_heka import LoadHeka
 from os.path import join
 
-def test_heka_reader(base_path, version, group_series_to_test, dp_thr=1e-6, info_type="mean_dp_match", assert_mode=False, include_stim_protocol=True):
+def test_heka_reader(base_path, version, group_series_to_test, dp_thr=1e-6, assert_time=True, include_stim_protocol=True):
     """
     Test the data read my LoadHeka matches the data when loading into Patchmaster. Data must be exported from Patchmaster
     using 'Export Sweep' as ascii for comparison with LoadHeka. See the main README.md (section 5) on details
@@ -24,17 +24,9 @@ def test_heka_reader(base_path, version, group_series_to_test, dp_thr=1e-6, info
                            e.g. to test the third series of the second group, and the fourth series of the third group,
                            = [["2", "3"], ["3", "4"]]
 
-    dp_thr - decimal place threshold, used as the number of decimal places to test matches to (for info_type = "perc_dp_match", "assert_dp_match")
+    dp_thr - decimal place threshold, used as the number of decimal places to test matches.
 
-    info_type -
-               "mean_dp_match" - print the mean and standard deviation of the number of decimal places LoadHeka matches Patchmaster for Im
-                                 and Vm data (scaled to pA and mV respectively). These are typically ~5
-
-                "perc_dp_match" - print the percent of samples that match Patchmaster to dp_thr decimal places or more
-
-                "assert_dp_match" - raise exception if any sample does not match Patchmaster to dp_thr decimal places or more
-
-    assert_mode - Tests are usually printed so the results for all series are run. However, if assert_mode is True, an exception will be
+    assert_time - Tests are usually printed so the results for all series are run. However, if assert_time is True, an exception will be
                   raised if data and Patchmaster do not match to pre-set cutoff values (see TestSeries().handle_assert() for details.
     """
     print("Testing " + version + "----------------------------------------------------------------------------------------------------------------\n")
@@ -43,7 +35,7 @@ def test_heka_reader(base_path, version, group_series_to_test, dp_thr=1e-6, info
                          only_load_header=True)
 
     for group_num, series_num in group_series_to_test:
-
+        print(f"group: {group_num} series: {series_num}")
         filename = version + "_group-{0}_series-{1}.asc".format(group_num,
                                                                 series_num)
 
@@ -63,8 +55,7 @@ def test_heka_reader(base_path, version, group_series_to_test, dp_thr=1e-6, info
                               series_num,
                               dp_thr,
                               im_or_vm,
-                              info_type,
-                              assert_mode,
+                              assert_time,
                               supress_time,
                               supress_stim,
                               )
@@ -77,7 +68,7 @@ def test_heka_reader(base_path, version, group_series_to_test, dp_thr=1e-6, info
         print("\n")
 
 class TestSeries:
-    def __init__(self, raw_heka, load_heka, group_num, series_num, dp_thr, im_or_vm, info_type, assert_mode, supress_time, supress_stim):
+    def __init__(self, raw_heka, load_heka, group_num, series_num, dp_thr, im_or_vm, assert_time, supress_time, supress_stim):
         """
         Class to test the Data (Im or Vm), reconstructed stimulus and time against exported Patchmaster data. Data is converted to pA
         and mV. For a reason that is not clear, the output of the Im and Vm data does not match HEKA perfectly, but to around 5 decimal
@@ -103,23 +94,12 @@ class TestSeries:
         self.group_num = group_num
         self.series_num = series_num
         self.im_or_vm = im_or_vm
-        self.info_type = info_type
-        self.assert_mode = assert_mode
+        self.assert_time = assert_time
         self.dp_thr = dp_thr
         self.stim_tested_flag = False
         self.time_tested_flag = False
 
-        if self.info_type == "mean_dp_match":
-            self.print_mean_and_sd_demical_place_match()
-        else:
-            sweeps_percent_close = self.get_list_of_percent_close_per_sweep()
-
-            if sweeps_percent_close:
-                if self.info_type == "perc_dp_match":
-                    self.print_percent_over_deminal_place_match(sweeps_percent_close)
-
-                if self.info_type == "assert_dp_match":
-                    self.handle_assert(sweeps_percent_close, self.info_type)
+        self.test_data()
 
         if not supress_time:
             self.test_time()
@@ -127,57 +107,22 @@ class TestSeries:
         if not supress_stim:
             self.test_reconstructed_stimulus()
 
-# Test Im or Vm --------------------------------------------------------------------------------------------------------------------------------------
+    def test_data(self):
+        all_assert = []
+        if np.any(self.load_heka["data"]):
 
-    def get_list_of_percent_close_per_sweep(self):
-        """
-        Continue i.e. if Vm skip Im
-        """
-        if not np.any(self.load_heka["data"]):
-            return
+            for raw_heka_sweep, load_heka_sweep in zip(self.raw_heka[self.im_or_vm],
+                                                       self.load_heka["data"]):
 
-        percent_close = []
-        for raw_heka_sweep, load_heka_sweep in zip(self.raw_heka[self.im_or_vm],
-                                                   self.load_heka["data"]):
+                raw = self.clean_data(raw_heka_sweep, expected_len=len(load_heka_sweep))
+                loaded = self.clean_data(load_heka_sweep)
 
-            percent_close.append(self.percent_isclose(self.clean_data(raw_heka_sweep), self.clean_data(load_heka_sweep), self.dp_thr))
+                all_assert.append(np.allclose(raw, loaded, rtol=0, atol=self.dp_thr))
 
-        return percent_close
-
-    def print_mean_and_sd_demical_place_match(self):
-        """
-        """
-        all_num_dp = []
-
-        if not np.any(self.load_heka["data"]):
-            return
-
-        for raw_heka_sweep, load_heka_sweep in zip(self.raw_heka[self.im_or_vm],
-                                                   self.load_heka["data"]):
-
-            difference = self.clean_data(raw_heka_sweep, expected_len=len(load_heka_sweep)) - self.clean_data(load_heka_sweep)
-            num_dp = self.num_dp(np.abs(difference))
-            all_num_dp.append(num_dp)
-
-        if all_num_dp:
-            all_num_dp = np.hstack(all_num_dp)
-            mean_dp = np.mean(all_num_dp)
-            print("mean: {0:.2f}, sd: {1:.2} decimal place match Patchmaster for group {2} series {3} {4}".format(mean_dp,
-                                                                                                                  np.std(all_num_dp),
-                                                                                                                  self.group_num,
-                                                                                                                  self.series_num,
-                                                                                                                  self.im_or_vm))
-            self.handle_assert(mean_dp, "mean_dp_match")
-
-    def print_percent_over_deminal_place_match(self, sweeps_percent_close):
-        """
-        """
-        mean_percent_close = np.mean(sweeps_percent_close)
-        print("{0:.3f} percent of samples in group {1} series {2} match Pachmaster to {3} decimal places".format(mean_percent_close,
-                                                                                                                 self.group_num,
-                                                                                                                 self.series_num,
-                                                                                                                 self.printable_dp()))
-        self.handle_assert(mean_percent_close, "perc_dp_match")
+            assert all(all_assert), "group {0} series {1} does not match Patchmaster to {2} decimal places".format(self.group_num,
+                                                                                                                   self.series_num,
+                                                                                                                   self.printable_dp())
+            print("group {0} series {1} matches Patchmaster to exactly {2} decimal places".format(self.group_num, self.series_num, self.printable_dp()))
 
 # Test Time ------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -204,8 +149,8 @@ class TestSeries:
                                                                    self.series_num))
         self.time_tested_flag = True
 
-        self.handle_assert(all(time_sweeps_correct), "test_time")
-
+        if self.assert_time:
+            assert all(time_sweeps_correct), "Time does not match Patchmaster to 10 decimal places"
 
 # Test Stimululus ------------------------------------------------------------------------------------------------------------------------------------
 
@@ -233,7 +178,8 @@ class TestSeries:
                                                                                                  self.im_or_vm))
         self.stim_tested_flag = True
 
-        self.handle_assert(stim_is_close, "test_stim")
+        assert stim_is_close, "Stimulus reconstruction does not match Patchmaster to 7 decimal places"
+
 
     def get_raw_stim(self):
         """
@@ -253,36 +199,6 @@ class TestSeries:
         return stim_data
 
 # Utils ----------------------------------------------------------------------------------------------------------------------------------------------
-
-    def handle_assert(self, param, test_type):
-        """
-        Assert if parameters for various tests do not fall over critial values.
-
-        "assert_dp_match" - all samples must match Patchmaster data to more than the number of decimal places supplied in dp_thr. The 'param'
-                            is a list of percent of samples that patch patchmaster to more than dp_thr decimal places
-
-        "mean_dp_match" - param is the aveage number of decimal places that the data matches Patchmaster data
-        "perc_dp_match" - param is the percent of samples that match Patchmaster to dp_thr decimal places or more
-        "test_time" - param is a bool from iclose() (see test_time())
-        "test_stim" - param is bool from isclose (see test_reconstructed_stimulus())
-        """
-        if test_type == "assert_dp_match":
-            assert (np.array(param) == 100).all(), "group {0} series {1} does not match Patchmaster to {2} decimal places".format(self.group_num,
-                                                                                                                                  self.series_num,
-                                                                                                                                  self.printable_dp())
-        if self.assert_mode:
-
-            if test_type == "mean_dp_match":
-                assert param > 4, "Mean difference from Patchmaster is more than 4 decimal places"
-
-            elif test_type == "perc_dp_match":
-                assert param > 99, "Less that 99% of samples are mode that {0} decimal places from Patchmaster".format(self.dp_thr)
-
-            elif test_type == "test_time":
-                assert param, "Time does not match Patchmaster to 10 decimal places"
-
-            elif test_type == "test_stim":
-                assert param, "Stimulus reconstruction does not match Patchmaster to 7 decimal places"
 
     def clean_data(self, data, expected_len=None):
         """
@@ -364,20 +280,6 @@ class TestSeries:
     @staticmethod
     def all_sweeps_are_same_num_samples(raw_heka_output):
         return len(np.unique([len(sweep) for sweep in raw_heka_output])) == 1
-
-    @staticmethod
-    def num_dp(dec, clear_inf=True):
-        dp = np.floor(np.abs(np.log10(dec + np.finfo(float).eps)))
-        if clear_inf:
-            dp = dp[~np.isinf(dp)]
-        return dp
-
-    @staticmethod
-    def percent_isclose(array1, array2, tolerance):
-        isclose_bool = np.isclose(array1, array2, atol=tolerance, rtol=0)
-        percent_close = np.count_nonzero(isclose_bool) / len(array1)
-        percent_close *= 100
-        return percent_close
 
     def printable_dp(self):
         return abs(int(f'{self.dp_thr:e}'.split('e')[-1]))
