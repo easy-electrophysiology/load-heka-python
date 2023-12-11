@@ -324,6 +324,8 @@ class LoadHeka:
 
                         this_record = {"hd": self._unpack_header(LevelFive()),
                                        "data": None}
+                        this_record["hd"]["TrYUnit"] = this_record["hd"]["TrYUnit"].upper()
+
                         record_childs = struct.unpack(endian + "i", self.fh.read(4))[0]
                         assert record_childs == 0
 
