@@ -3,7 +3,6 @@ import sys
 sys.path.append(r"C:\fMRIData\git-repo\load-heka-python")
 
 from .runners import heka_reader_tester
-from os.path import join
 import pytest
 
 

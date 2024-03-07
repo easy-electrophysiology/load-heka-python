@@ -42,4 +42,4 @@ skip-string-normalization = false
 line-length = 120
 
 [tool.codespell]
-skip = 'onl,OutOut,InOut'
+ignore-words-list = 'onl,outout,inout,remaning'

@@ -1,7 +1,5 @@
-import numpy as np
 from .SharedTrees import (
     cstr,
-    get_fmt,
     Description,
     get_data_kind,
     get_recording_mode,

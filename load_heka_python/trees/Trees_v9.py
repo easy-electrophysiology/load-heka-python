@@ -1,5 +1,4 @@
-import numpy as np
-from .SharedTrees import cstr, get_fmt, Description, AmplifierState_v9, LockInParams_v9, UserParamDescrType
+from .SharedTrees import cstr, Description, AmplifierState_v9, LockInParams_v9, UserParamDescrType
 
 from .SharedTrees import (
     get_segment_class,

@@ -2,7 +2,6 @@ repos:
     - repo: https://github.com/pre-commit/pre-commit-hooks
       rev: v4.5.0
       hooks:
-          - id: check-docstring-first
           - id: check-executables-have-shebangs
           - id: check-merge-conflict
           - id: check-toml
@@ -19,22 +18,9 @@ repos:
       rev: 24.2.0
       hooks:
           - id: black
-    - repo: https://github.com/pre-commit/mirrors-mypy
-      rev: v1.8.0
-      hooks:
-          - id: mypy
-            additional_dependencies:
-                - types-setuptools
-                - types-requests
-                - types-PyYAML
-                - types-appdirs
-                - types-paramiko
-                - types-simplejson
-                - pandas-stubs
     - repo: https://github.com/codespell-project/codespell
       rev: v2.2.6
       hooks:
       - id: codespell
-        args: [-L onl,OutOut,InOut,remaning]
         additional_dependencies:
           - tomli

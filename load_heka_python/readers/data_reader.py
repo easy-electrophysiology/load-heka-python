@@ -61,7 +61,7 @@ def run_checks(rec, data, data_kind):
     assert data_kind["IsLittleEndian"], "big endian data not tested"
     assert not data_kind["IsVirtual"], "isVirtual channels not tested"
 
-    # Ensure assumptions are all true for the forseeable future, test these when counter examples come up
+    # Ensure assumptions are all true for the foreseeable future, test these when counter examples come up
     assert rec["hd"]["TrDataPoints"] == len(data)
     assert rec["hd"]["TrYOffset"] == 0.0
     assert rec["hd"]["TrGLeak"] == 0.0

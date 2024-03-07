@@ -3,13 +3,6 @@ import numpy as np
 import struct
 from .trees.SharedTrees import (
     BundleHeader,
-    BundleItems,
-    UserParamDescrType,
-    LockInParams_v9,
-    AmplifierState_v9,
-    UserParamDescrType,
-    Description,
-    cstr,
     MarkerRootRecord,
     MarkerRecord,
     get_stim_to_dac_id,

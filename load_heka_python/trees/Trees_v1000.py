@@ -1,31 +1,3 @@
-from .SharedTrees import (
-    cstr,
-    get_fmt,
-    Description,
-    AmplifierState_v9,
-    LockInParams_v9,
-    get_data_kind,
-    UserParamDescrType,
-)
-
-from .SharedTrees import (
-    get_segment_class,
-    get_data_kind,
-    get_seg_store_type,
-    get_leak_comp_type,
-    get_break_type,
-    get_leak_hold_type,
-    get_leak_store_type,
-    get_adc_type,
-    get_auto_ranging_type,
-    get_ampl_mode_type,
-    get_ext_trigger_type,
-    get_increment_mode_type,
-    get_stim_to_dac_id,
-    get_recording_mode,
-)
-
-
 """
 ------------------------------------------------------------------------------------------------------------------------------------------------------
  StimFile_v1000
@@ -126,6 +98,28 @@ RootLevel            = 0;
 
 
 """
+
+from .SharedTrees import (
+    cstr,
+    Description,
+    AmplifierState_v9,
+    LockInParams_v9,
+    get_data_kind,
+    UserParamDescrType,
+)
+
+from .SharedTrees import (
+    get_segment_class,
+    get_seg_store_type,
+    get_break_type,
+    get_leak_hold_type,
+    get_leak_store_type,
+    get_adc_type,
+    get_ampl_mode_type,
+    get_increment_mode_type,
+    get_stim_to_dac_id,
+    get_recording_mode,
+)
 
 
 class StimStimSegmentRecord(Description):
