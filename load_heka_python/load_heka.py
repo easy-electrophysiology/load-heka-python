@@ -1,15 +1,21 @@
 from io import open
 import numpy as np
 import struct
-from .trees.SharedTrees import BundleHeader, BundleItems, UserParamDescrType, LockInParams_v9, AmplifierState_v9, UserParamDescrType, Description, \
-    cstr, MarkerRootRecord, MarkerRecord, get_stim_to_dac_id, get_data_kind
+from .trees.SharedTrees import (
+    BundleHeader,
+    MarkerRootRecord,
+    MarkerRecord,
+    get_stim_to_dac_id,
+    get_data_kind,
+)
 from .readers import stim_reader
 from .readers import data_reader
 import warnings
-warnings.simplefilter('always',
-                      UserWarning)
+
+warnings.simplefilter("always", UserWarning)
 
 OLD_VERSIONS = ["v2x65, 19-Dec-2011"]
+
 
 def _import_trees(header):
     """
@@ -21,8 +27,16 @@ def _import_trees(header):
     elif header["oVersion"] in ["v2x90.2, 22-Nov-2016"]:
         from .trees import Trees_v9 as Trees
 
-    elif header["oVersion"] in ["v2x90.3, 19-Mar-2018", "v2x90.4, 30-Oct-2018", "v2x90.5, 09-Apr-2019",
-                                "1.2.0 [Build 1469]", "1.4.1 [Build 1036]", "v2x91, 23-Feb-2021", "v2x91, 06-Jul-2020", "v2x92, 23-February-2023"]:
+    elif header["oVersion"] in [
+        "v2x90.3, 19-Mar-2018",
+        "v2x90.4, 30-Oct-2018",
+        "v2x90.5, 09-Apr-2019",
+        "1.2.0 [Build 1469]",
+        "1.4.1 [Build 1036]",
+        "v2x91, 23-Feb-2021",
+        "v2x91, 06-Jul-2020",
+        "v2x92, 23-February-2023",
+    ]:
         from .trees import Trees_v1000 as Trees
     else:
         raise Exception("Version not current supported, please contact support@easyelectrophysiology.com")
@@ -43,12 +57,13 @@ class LoadHeka:
 
     TODO:
         - not clear how to handle different TrTimeOffset for Im and Vm traces (in EE at least)
-        - cannot support "v2x73.5, 21-May-2015", HEKA new file notes are note 2.74 and SimTool verion is pre-2.73, so will need to
+        - cannot support "v2x73.5, 21-May-2015", HEKA new file notes are note 2.74 and SimTool version is pre-2.73, so will need to
           contact HEKA and get their structure information.
     """
+
     def __init__(self, full_filepath, only_load_header=False):
 
-        self.Trees = None                            # filled with import once version is known
+        self.Trees = None  # filled with import once version is known
         self.full_filepath = full_filepath
 
         self.fh = None
@@ -57,8 +72,7 @@ class LoadHeka:
         self.header = self._get_header()
         self.version = self.header["oVersion"]
 
-        assert self.header["oSignature"] == "DAT2", \
-            "Version DAT1 not supported"
+        assert self.header["oSignature"] == "DAT2", "Version DAT1 not supported"
 
         self.Trees = _import_trees(self.header)
         self.pul = self._get_pul()
@@ -75,8 +89,7 @@ class LoadHeka:
             self._fill_pul_recs_with_data()
 
     def _get_header(self):
-        """
-        """
+        """ """
         self.fh.seek(0)
         header = self._unpack_header(BundleHeader())
 
@@ -88,75 +101,93 @@ class LoadHeka:
         return header
 
     def _get_pgf(self):
-        """
-        """
+        """ """
         pgf_start_bit, pgf_num_bits = self._get_start_bit(".pgf")
         if pgf_num_bits > 0:
-            pgf, pgf_sizes = self._unpack_tree(pgf_start_bit,
-                                               self.Trees.StimRootRecord, self.Trees.StimStimulationRecord, self.Trees.StimChannelRecord, self.Trees.StimStimSegmentRecord, None)
+            pgf, pgf_sizes = self._unpack_tree(
+                pgf_start_bit,
+                self.Trees.StimRootRecord,
+                self.Trees.StimStimulationRecord,
+                self.Trees.StimChannelRecord,
+                self.Trees.StimStimSegmentRecord,
+                None,
+            )
             assert self.fh.tell() == pgf_start_bit + pgf_num_bits
 
             return pgf
 
     def _get_pul(self):
-        """
-        """
+        """ """
         pul_start_bit, pul_num_bits = self._get_start_bit(".pul")
         if pul_num_bits > 0:
-            pul, pul_sizes = self._unpack_tree(pul_start_bit,
-                                               self.Trees.PulseRootRecord, self.Trees.GroupRecord, self.Trees.PulSeriesRecord, self.Trees.SweepRecord, self.Trees.TraceRecord)
+            pul, pul_sizes = self._unpack_tree(
+                pul_start_bit,
+                self.Trees.PulseRootRecord,
+                self.Trees.GroupRecord,
+                self.Trees.PulSeriesRecord,
+                self.Trees.SweepRecord,
+                self.Trees.TraceRecord,
+            )
             assert self.fh.tell() == pul_start_bit + pul_num_bits
 
             return pul
 
     def _get_amp(self):
-        """
-        """
+        """ """
         amp_start_bit, amp_num_bits = self._get_start_bit(".amp")
         if amp_num_bits > 0:
-            amp, amp_sizes = self._unpack_tree(amp_start_bit,
-                                               self.Trees.AmpRootRecord, self.Trees.AmpSeriesRecord, self.Trees.AmplStateRecord, None, None)
+            amp, amp_sizes = self._unpack_tree(
+                amp_start_bit,
+                self.Trees.AmpRootRecord,
+                self.Trees.AmpSeriesRecord,
+                self.Trees.AmplStateRecord,
+                None,
+                None,
+            )
             assert self.fh.tell() == amp_start_bit + amp_num_bits
 
             return amp
 
     def _get_sol(self):
-        """
-        """
+        """ """
         sol_start_bit, sol_num_bits = self._get_start_bit(".sol")
         if sol_num_bits > 0:
-            sol, sol_sizes = self._unpack_tree(sol_start_bit,
-                                               self.Trees.SolutionsRootRecord, self.Trees.SolutionRecord, self.Trees.ChemicalRecord, None, None)
+            sol, sol_sizes = self._unpack_tree(
+                sol_start_bit,
+                self.Trees.SolutionsRootRecord,
+                self.Trees.SolutionRecord,
+                self.Trees.ChemicalRecord,
+                None,
+                None,
+            )
             assert self.fh.tell() == sol_start_bit + sol_num_bits
 
             return sol
 
     def _get_mrk(self):
         """
-        Marker Records are the same betwen v9 and v1000 so imported from SharedTrees
+        Marker Records are the same between v9 and v1000 so imported from SharedTrees
         """
         mrk_start_bit, mrk_num_bits = self._get_start_bit(".mrk")
         if mrk_start_bit > 0:
-            mrk, mrk_sizes = self._unpack_tree(mrk_start_bit,
-                                               MarkerRootRecord, MarkerRecord, None, None, None)
+            mrk, mrk_sizes = self._unpack_tree(mrk_start_bit, MarkerRootRecord, MarkerRecord, None, None, None)
             assert self.fh.tell() == mrk_start_bit + mrk_num_bits
 
             return mrk
 
     def _get_onl(self):
-        """
-        """
+        """ """
         onl_start_bit, onl_num_bits = self._get_start_bit(".onl")
         if onl_num_bits > 0:
-            onl, onl_sizes = self._unpack_tree(onl_start_bit,
-                                               self.Trees.AnalRootRecord, self.Trees.MethodRecord, self.Trees.FunctionRecord, None, None)
+            onl, onl_sizes = self._unpack_tree(
+                onl_start_bit, self.Trees.AnalRootRecord, self.Trees.MethodRecord, self.Trees.FunctionRecord, None, None
+            )
             assert self.fh.tell() == onl_start_bit + onl_num_bits
 
             return onl
 
     def _get_start_bit(self, key):
-        """
-        """
+        """ """
         for item in self.header["oBundleItems"]:
             if item["oExtension"] == key:
                 return item["oStart"], item["oLength"]
@@ -187,13 +218,13 @@ class LoadHeka:
         description superclass.
 
         In short, struct.unpack will return a list of bytes and known types (fmts, see struct documentation) of total size
-        description.size and split into each record entry (e.g. one interger, one double, 10s). We iterate through
+        description.size and split into each record entry (e.g. one integer, one double, 10s). We iterate through
         this list of bytes / types and decode each one at a time if required. Simple types (i.e. int, double)
         will be decoded by struct. Sometimes we need to decode by a function, done in self._read_byte()
 
         In some instances we need to decode with another tree record. In this case we pass to self._unpack_substruct()
         which does pretty much the same thing, unpacking another byte array using this new class. These tree records are
-        recursive, and so self._unpack_substruct() can be called from within itself to unpack this resursive structure.
+        recursive, and so self._unpack_substruct() can be called from within itself to unpack this recursive structure.
         """
         items = struct.unpack(endian + description.get_fmt(), self.fh.read(description.size))
 
@@ -204,12 +235,12 @@ class LoadHeka:
             name, fmt, decoder = self._get_entry_details(entry)
 
             # pull item(s) out of the list based on format string
-            if len(fmt) == 1 or fmt[-1] == 's':
+            if len(fmt) == 1 or fmt[-1] == "s":
                 item = items[i]
                 i += 1
             else:
                 n = int(fmt[:-1])
-                item = items[i:i+n]
+                item = items[i : i + n]
                 i += n
 
             if self._decoder_is_class(decoder):
@@ -254,8 +285,7 @@ class LoadHeka:
 
     @staticmethod
     def _get_entry_details(entry):
-        """
-        """
+        """ """
         if len(entry) == 2:
             name, fmt = entry
             decoder = None
@@ -266,8 +296,7 @@ class LoadHeka:
 
     @staticmethod
     def _read_byte(item, decoder, endian):
-        """
-        """
+        """ """
         if decoder in [get_stim_to_dac_id, get_data_kind]:
             return decoder(item, endian)
         if decoder:
@@ -275,12 +304,11 @@ class LoadHeka:
         else:
             return item
 
-# ----------------------------------------------------------------------------------------------------------------------------------------------------
-# Unpack Tree Structure
-# ----------------------------------------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------------------------------------------------------------
+    # Unpack Tree Structure
+    # ----------------------------------------------------------------------------------------------------------------------------------------------------
 
-    def _unpack_tree(self, start_bit,
-                     Root, LevelTwo, LevelThree, LevelFour, LevelFive):
+    def _unpack_tree(self, start_bit, Root, LevelTwo, LevelThree, LevelFour, LevelFive):
         """
         Unpack a tree structure. See HEKA documentation (links in HekaLoader docstring) for their organisation.
         The three is output as a dictionary, starting at the root level. Each level has two entries, "hd" and "ch".
@@ -293,37 +321,32 @@ class LoadHeka:
         """
         endian, levels, sizes = self._get_magic_level_sizes(start_bit)
 
-        tree = {"hd": self._unpack_header(Root()),
-                "ch": []}
+        tree = {"hd": self._unpack_header(Root()), "ch": []}
 
         root_nchilds = struct.unpack(endian + "i", self.fh.read(4))[0]
         assert Root().size == sizes[0]
 
         for i_level2 in range(root_nchilds):
 
-            this_level2 = {"hd": self._unpack_header(LevelTwo()),
-                           "ch": []}
+            this_level2 = {"hd": self._unpack_header(LevelTwo()), "ch": []}
             level2_nchilds = struct.unpack(endian + "i", self.fh.read(4))[0]
             assert LevelTwo().size == sizes[1]
 
             for i_level3 in range(level2_nchilds):
 
-                this_level3 = {"hd": self._unpack_header(LevelThree()),
-                               "ch": []}
+                this_level3 = {"hd": self._unpack_header(LevelThree()), "ch": []}
                 level3_nchilds = struct.unpack(endian + "i", self.fh.read(4))[0]
                 assert LevelThree().size == sizes[2]
 
                 for i_level4 in range(level3_nchilds):
 
-                    this_level4 = {"hd": self._unpack_header(LevelFour()),
-                                   "ch": []}
+                    this_level4 = {"hd": self._unpack_header(LevelFour()), "ch": []}
                     level4_nchilds = struct.unpack(endian + "i", self.fh.read(4))[0]
                     assert LevelFour().size == sizes[3]
 
                     for i_level5 in range(level4_nchilds):
 
-                        this_record = {"hd": self._unpack_header(LevelFive()),
-                                       "data": None}
+                        this_record = {"hd": self._unpack_header(LevelFive()), "data": None}
                         this_record["hd"]["TrYUnit"] = this_record["hd"]["TrYUnit"].upper()
 
                         record_childs = struct.unpack(endian + "i", self.fh.read(4))[0]
@@ -342,14 +365,14 @@ class LoadHeka:
     def _get_magic_level_sizes(self, start_bit):
         """
         The 'Magic' as described in the HEKA documentation is read from the first few bytes of the
-        tree and contains its endianess, number of levels contained within it and sizes of each record.
+        tree and contains its endianness, number of levels contained within it and sizes of each record.
         """
         self.fh.seek(start_bit)
         magic = self.fh.read(4)
-        if magic == b'eerT':
-            endian = '<'
-        elif magic == b'Tree':
-            endian = '>'
+        if magic == b"eerT":
+            endian = "<"
+        elif magic == b"Tree":
+            endian = ">"
             raise Exception("Big endian not tested yet")
 
         levels = struct.unpack(endian + "i", self.fh.read(4))[0]
@@ -387,13 +410,13 @@ class LoadHeka:
         max_num_samples = max(sweep_num_samples)
         return max_num_samples
 
-# ----------------------------------------------------------------------------------------------------------------------------------------------------
-# Public_functions
-# ----------------------------------------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------------------------------------------------------------
+    # Public_functions
+    # ----------------------------------------------------------------------------------------------------------------------------------------------------
 
     def get_series_data(self, group_idx, series_idx, channel_idx, include_stim_protocol=False, fill_with_mean=False):
         """
-        Convenience function to extract Im or Vm channel data from a series. If the data has not already been loaded into memeory,
+        Convenience function to extract Im or Vm channel data from a series. If the data has not already been loaded into memory,
         it will be loaded into the pulse tree prior to beign returned in a more convenient form with this method. Output is in
         s, pA, mV.
 
@@ -418,7 +441,7 @@ class LoadHeka:
         OUTPUTS:
             dictionary of parameters (see out below). For each sweep, the parameter value is appended to a list. This is somewhat redundant
             as many of these parameters are checked that they are equal in check_sweep_params_are_equal_for_every_series_in_file(). However
-            while verbose this is kept for now as the HEKA filetype is very dynamic, and better to be clearer incase of unxpected edge cases.
+            while verbose this is kept for now as the HEKA filetype is very dynamic, and better to be clearer in case of unexpected edge cases.
 
             As well as relevant parameters for the record, the "data" field contains a sweep x num samples numpy array of all sweeps from the series. If
             a sweep has less samples in it than the others, the end of the row will be padded with Nan (unless fill_with_mean is set, in which
@@ -457,8 +480,7 @@ class LoadHeka:
             out["stim"] = self.get_stimulus_for_series(group_idx, series_idx)
 
         for key in ["data", "time"]:
-            out[key] = np.full([num_rows, max_num_samples],
-                               np.nan)
+            out[key] = np.full([num_rows, max_num_samples], np.nan)
 
         for sweep_idx, sweep in enumerate(series["ch"]):
 
@@ -497,20 +519,17 @@ class LoadHeka:
 
     def print_group_names(self):
         for group_idx, group in enumerate(self.pul["ch"]):
-            print("{0} (index: {1})".format(group["hd"]["GrLabel"],
-                                            group_idx))
+            print("{0} (index: {1})".format(group["hd"]["GrLabel"], group_idx))
 
     def print_series_names(self, group_idx):
         """
         Print all series names in a group and their index
         """
         for series_idx, series in enumerate(self.pul["ch"][group_idx]["ch"]):
-            print("{0} (index: {1})".format(series["hd"]["SeLabel"],
-                                            series_idx))
+            print("{0} (index: {1})".format(series["hd"]["SeLabel"], series_idx))
 
     def get_dict_of_group_and_series(self):
-        """
-        """
+        """ """
         groups_and_series = {}
         for group_idx, group in enumerate(self.pul["ch"]):
 
@@ -544,7 +563,7 @@ class LoadHeka:
 
     def open(self):
         assert not self.fh, "File already open. Use close() before open()"
-        self.fh = open(self.full_filepath, 'rb')
+        self.fh = open(self.full_filepath, "rb")
 
     def close(self):
         self.fh.close()

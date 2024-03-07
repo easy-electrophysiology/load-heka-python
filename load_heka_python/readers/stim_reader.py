@@ -1,11 +1,13 @@
 import warnings
 import numpy as np
-warnings.simplefilter('always', UserWarning)
+
+warnings.simplefilter("always", UserWarning)
 
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------------
 # Generate Stimulus
 # ----------------------------------------------------------------------------------------------------------------------------------------------------
+
 
 def get_stimulus_for_series(pul, pgf, group_idx, series_idx):
     """
@@ -31,6 +33,7 @@ def get_stimulus_for_series(pul, pgf, group_idx, series_idx):
     info["data"] = data
     return info
 
+
 def get_sweep_info(pul, pgf, group_idx, series_idx):
     """
     Find the associated record in the StimTree from the PulseTree
@@ -42,26 +45,31 @@ def get_sweep_info(pul, pgf, group_idx, series_idx):
     stim_idx = pul_sweep["hd"]["SwStimCount"] - 1
 
     stim_sweep = pgf["ch"][stim_idx]
-    
+
     return stim_sweep, pul_sweep, num_sweeps_in_recorded_data
 
+
 def get_dac_and_important_params(stim_sweep):
-    """
-    """
+    """ """
     dac = stim_sweep["ch"][0]
     info = {
         "ts": stim_sweep["hd"]["stSampleInterval"],
         "num_sweeps": stim_sweep["hd"]["stNumberSweeps"],
-        "units":  dac["hd"]["chDacUnit"],
-        "holding":  dac["hd"]["chHolding"],
-        "use_relative":  dac["hd"]["chStimToDacID"]["UseRelative"],
+        "units": dac["hd"]["chDacUnit"],
+        "holding": dac["hd"]["chHolding"],
+        "use_relative": dac["hd"]["chStimToDacID"]["UseRelative"],
     }
 
     if info["units"] == "mV":
-        warnings.warn("Stimulus units are specified {0} but (almost certainly) stored as V). Please check. Updating to V.".format(info["units"]))  # e.g. 1 instance of units mV but the data was still stored as V...
+        warnings.warn(
+            "Stimulus units are specified {0} but (almost certainly) stored as V). Please check. Updating to V.".format(
+                info["units"]
+            )
+        )  # e.g. 1 instance of units mV but the data was still stored as V...
         info["untis"] = "V"
 
     return dac, info
+
 
 def check_header(dac):
 
@@ -69,22 +77,35 @@ def check_header(dac):
         warnings.warn("Only StimScale supported, stimulus protocol not reconstructed")
         return False
 
-    for key in ["UseFileTemplate", "UseForLockIn", "UseForWavelength", "UseScaling", "UseForChirp", "UseForImaging"]:  # UseRelative often on, test
+    for key in [
+        "UseFileTemplate",
+        "UseForLockIn",
+        "UseForWavelength",
+        "UseScaling",
+        "UseForChirp",
+        "UseForImaging",
+    ]:  # UseRelative often on, test
         if dac["hd"]["chStimToDacID"][key]:
-            warnings.warn("Paramater {0} not tested,stimulus protocol not reconstructed".format(key))
+            warnings.warn("Parameter {0} not tested, stimulus protocol not reconstructed".format(key))
             return False
     return True
+
 
 def check_data(data, sweep, num_sweeps_in_recorded_data):
     rec_num_samples = sweep["ch"][0]["hd"]["TrDataPoints"]
     if rec_num_samples != data.shape[1]:
-        warnings.warn("Reconstructed stimulis size is not the same as corresponding pulse tree record."
-                      "Stimulus will be disregarded.")
+        warnings.warn(
+            "Reconstructed stimulis size is not the same as corresponding pulse tree record."
+            "Stimulus will be disregarded."
+        )
         return False
 
-    assert num_sweeps_in_recorded_data == data.shape[0], "reconstructed stimulus size cannot be made equal to recorded number of sweeps"
+    assert (
+        num_sweeps_in_recorded_data == data.shape[0]
+    ), "reconstructed stimulus size cannot be made equal to recorded number of sweeps"
 
     return True
+
 
 def read_segments_into_classes(dac, info):
     """
@@ -96,25 +117,24 @@ def read_segments_into_classes(dac, info):
             segments.append(StimSegment(segment["hd"], info))
     return segments
 
+
 def create_stimulus_waveform_from_segments(segments, info, num_sweeps_in_recorded_data):
     """
     TODO: needs refactoring, see StimSegment()
     """
     num_samples = sum([segment.num_samples for segment in segments])
-    data = np.full([info["num_sweeps"],
-                    num_samples],
-                   np.nan)
+    data = np.full([info["num_sweeps"], num_samples], np.nan)
 
     for sweep in range(info["num_sweeps"]):
         i = 0
         for seg in segments:
 
             if seg.type in ["SegmentConstant", "SegmentContinuous"]:
-                data[sweep, i: i + seg.num_samples] = seg.block(sweep)
+                data[sweep, i : i + seg.num_samples] = seg.block(sweep)
 
             elif seg.type == "SegmentRamp":
                 start_voltage = data[sweep, i - 1] if i != 0 else 0
-                data[sweep, i: i + seg.num_samples] = seg.ramp(sweep, start_voltage)
+                data[sweep, i : i + seg.num_samples] = seg.ramp(sweep, start_voltage)
             i += seg.num_samples
 
     # data is stored as V and uA - ensure is V and A (TODO: own function)
@@ -122,15 +142,20 @@ def create_stimulus_waveform_from_segments(segments, info, num_sweeps_in_recorde
         data /= 1000000000
 
     if num_sweeps_in_recorded_data < data.shape[0]:
-        warnings.warn("Stimulus protocol reshaped from {0} to {1} sweeps to match recorded data".format(data.shape[0],
-                                                                                                        num_sweeps_in_recorded_data))
+        warnings.warn(
+            "Stimulus protocol reshaped from {0} to {1} sweeps to match recorded data".format(
+                data.shape[0], num_sweeps_in_recorded_data
+            )
+        )
         data = data[:num_sweeps_in_recorded_data, :]
 
     return data
 
+
 # ----------------------------------------------------------------------------------------------------------------------------------------------------
 # StimSegment Class
 # ----------------------------------------------------------------------------------------------------------------------------------------------------
+
 
 class StimSegment:
     def __init__(self, dac_header, info):
@@ -154,7 +179,9 @@ class StimSegment:
         self.delta_t_factor = dac_header["seDeltaTFactor"]
         self.delta_t_increment = dac_header["seDeltaTIncrement"]
         self.increasing_or_decreasing = self.get_inc_or_dec()
-        self.voltage_idx = dac_header["seVoltageSource"]  # index of the 'Voltage' dropdown menu (i.e. specify value, Holding, p1....)
+        self.voltage_idx = dac_header[
+            "seVoltageSource"
+        ]  # index of the 'Voltage' dropdown menu (i.e. specify value, Holding, p1....)
         self.ts = info["ts"]
         self.use_relative = info["use_relative"]
         self.holding = info["holding"]
@@ -167,16 +194,15 @@ class StimSegment:
             increasing_or_decreasing = "increasing"
 
         elif self.voltage_increment_mode in ["ModeDec"]:
-            raise Expection("Test Negative")
+            raise BaseException("Test Negative")
         else:
-            raise Expection("voltage increment mode not recognised")
+            raise BaseException("voltage increment mode not recognised")
 
         return increasing_or_decreasing
 
     def sweep(self, sweep_idx):
         func = np.add if self.increasing_or_decreasing == "increasing" else np.subtract
-        return func(self.voltage,
-                    self.delta_v_increment * sweep_idx)
+        return func(self.voltage, self.delta_v_increment * sweep_idx)
 
     def block(self, sweep_idx):
         block = np.tile(self.sweep(sweep_idx), self.num_samples)
@@ -191,17 +217,15 @@ class StimSegment:
         - the first sample is not 0 but 0 + one step along the ramp. see test_load_heka.py TestSeries() for details
         """
         if self.delta_v_increment != 0:
-            raise Expection("increment with ramp has not been tested")
+            raise BaseException("increment with ramp has not been tested")
 
         if self.voltage_idx == 1:  # if ramp is used but Voltage mode is holding it will be flat
-            raise Expection("ramp with voltage idx 1 has not been tested")
-            self.voltage = 0
-            return self.block(0)
+            raise BaseException("ramp with voltage idx 1 has not been tested")
+            # self.voltage = 0
+            # return self.block(0)
 
         voltage_inc = (self.voltage - start_voltage) / self.num_samples
-        ramp = np.linspace(start_voltage + voltage_inc,
-                           self.voltage,
-                           self.num_samples)
+        ramp = np.linspace(start_voltage + voltage_inc, self.voltage, self.num_samples)
         return self.handle_holding(ramp)
 
     def handle_holding(self, data):
@@ -211,8 +235,11 @@ class StimSegment:
             return data
 
     def run_checks(self):
-        if self.type not in ["SegmentConstant", "SegmentRamp", "SegmentContinuous"] or self.voltage_increment_mode != "ModeInc":
-            raise Expection("Stimulation Type {0} Not Supported".format(self.type))
+        if (
+            self.type not in ["SegmentConstant", "SegmentRamp", "SegmentContinuous"]
+            or self.voltage_increment_mode != "ModeInc"
+        ):
+            raise BaseException("Stimulation Type {0} Not Supported".format(self.type))
 
         assert self.voltage_idx in [0, 1], "Only Voltage number and Holding are supported "
 
