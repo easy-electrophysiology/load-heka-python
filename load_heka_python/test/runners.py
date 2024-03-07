@@ -41,7 +41,8 @@ def heka_reader_tester(base_path, version, group_series_to_test, dp_thr=1e-6, as
 
         raw_heka = read_heka_test_ascii(join(base_path, version, filename), has_leak)
 
-        # TODO: tidy up.
+        # calculate number of channels (if channel not included in ascii it will
+        # be all Nan.
         num_channels = np.sum(
             [not np.all(np.isnan(np.hstack(raw_heka["Im"]))), not np.all(np.isnan(np.hstack(raw_heka["Vm"])))],
         dtype=np.int64
@@ -52,7 +53,13 @@ def heka_reader_tester(base_path, version, group_series_to_test, dp_thr=1e-6, as
         supress_time = supress_stim = False
         for channel_idx in range(num_channels):
 
-            load_heka = heka_file.get_series_data(int(group_num) - 1, int(series_num) - 1, channel_idx, include_stim_protocol=include_stim_protocol, fill_with_mean=True)
+            load_heka = heka_file.get_series_data(
+                int(group_num) - 1,
+                int(series_num) - 1,
+                channel_idx,
+                include_stim_protocol=include_stim_protocol,
+                fill_with_mean=True
+            )
 
             if load_heka["data_kinds"][0]["IsLeak"]:
                 channel_type = "leak"
@@ -129,14 +136,10 @@ class SeriesTest:
                 loaded = self.clean_data(load_heka_sweep)
 
                 all_assert.append(np.allclose(raw, loaded, rtol=0, atol=self.dp_thr))
-                if all_assert[-1] is False:
-                    breakpoint()
-            try:
-                assert all(all_assert), "group {0} series {1} does not match Patchmaster to {2} decimal places".format(self.group_num,
+
+            assert all(all_assert), "group {0} series {1} does not match Patchmaster to {2} decimal places".format(self.group_num,
                                                                                                                        self.series_num,
                                                                                                                        self.printable_dp())
-            except:
-                breakpoint()
             print("group {0} series {1} matches Patchmaster to exactly {2} decimal places".format(self.group_num, self.series_num, self.printable_dp()))
 
 # Test Time ------------------------------------------------------------------------------------------------------------------------------------------
