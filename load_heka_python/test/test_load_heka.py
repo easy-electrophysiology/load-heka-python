@@ -129,3 +129,9 @@ class TestFiles:
         version = "f13_v2x92"
         group_num_series_num_to_test = [["1", "4"], ["2", "2"], ["3", "4"], ["5", "4"], ["6", "2"]]
         heka_reader_tester(base_path, version, group_num_series_num_to_test, dp_thr=1e-04, include_stim_protocol=False)
+
+    def test_1_4_1_with_leak(self, base_path):
+        """"""
+        version = "f14_1.4.1[Build 1036]leak"
+        group_num_series_num_to_test = [["1", "1"], ["2", "2"], ["4", "3"]]
+        heka_reader_tester(base_path, version, group_num_series_num_to_test, dp_thr=1e-04, include_stim_protocol=False, has_leak=True)

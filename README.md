@@ -37,7 +37,7 @@ from load_heka_python.load_heka import LoadHeka
 full_path_to_file = r"C:\path\to\a\file.dat"
 
 heka_file = LoadHeka(full_path_to_file) 
-series_data = heka_file.get_series_data("Vm", group_idx=0, series_idx=0)
+series_data = heka_file.get_series_data(group_idx=0, series_idx=0, channel_idx=0)
 heka_file.close()
 ```
 
@@ -47,7 +47,7 @@ will be closed when garbage collection occurs, but this is not ideal.
 With a context manager:
 ```
 with LoadHeka(full_path_to_file) as heka_file:
-	series_data = heka_file.get_series_data("Vm", group_idx=0, series_idx=0)
+	series_data = heka_file.get_series_data(group_idx=0, series_idx=0, channel_idx=0)
 ```
 This will ensure the file is closed automatically once the block has finished.
 
@@ -95,7 +95,7 @@ Public Functions:
 ```
 heka_file.print_group_names()
 heka_file.print_series_names(group_idx)
-heka_file.get_series_data(Im_or_Vm="Im" or "Vm", group_idx=int, series_idx=int, include_stim_protocol=bool)
+heka_file.get_series_data(group_idx=group_idx, series_idx=0, channel_idx=0, include_stim_protocol=bool)
 ```
 First, to get the indexes of the group and series you want to load, you can use:
 ```
@@ -107,10 +107,10 @@ heka_file.print_series_names(group_idx)
 ```
 This will print out the names of the group / series as they appear in PatchMaster, as well as their index.
 
-Next, we can load a series using its index (zero indexed). For example, to load the Vm channel of the third group, 
-second series, we can use:
+Next, we can load a series using its index (zero indexed). For example, to load the third channel of the third group, 
+2nd series, we can use:
 ```
-series = heka_file.get_series_data("Vm", group_idx=2, series_idx=1, include_stim_protocol=True, fill_with_mean=False)
+series = heka_file.get_series_data(group_idx=2, series_idx=1, channel_idx=2, include_stim_protocol=True, fill_with_mean=False)
 ```
 This will return the dictionary data with series:
 
@@ -159,11 +159,9 @@ Also, please send your files to support@easyelectrophysiology.com so they can be
 Known settings currently not tested / supported:
 - big endian encoding
 - data stored as int32 and float64
-- interleaved data
-- leak and virtual data
+- virtual data
 - units not in s, A, V
 - currently only Constant (positive), Ramp (positive) and Continous stimulus protocol reconstruction is supported
-- sweeps with more than two records are not supported
 
 However, there may be other setting combinations that have not been anticipated. So far, all tested files match the HEKA
 data output well (see `./test/test_load_heka.py` for details). Again, please send your files to support@easyelectrophysiology.com so they can be added 

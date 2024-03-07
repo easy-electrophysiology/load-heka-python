@@ -22,7 +22,7 @@ def _import_trees(header):
         from .trees import Trees_v9 as Trees
 
     elif header["oVersion"] in ["v2x90.3, 19-Mar-2018", "v2x90.4, 30-Oct-2018", "v2x90.5, 09-Apr-2019",
-                                "1.2.0 [Build 1469]", "v2x91, 23-Feb-2021", "v2x91, 06-Jul-2020", "v2x92, 23-February-2023"]:
+                                "1.2.0 [Build 1469]", "1.4.1 [Build 1036]", "v2x91, 23-Feb-2021", "v2x91, 06-Jul-2020", "v2x92, 23-February-2023"]:
         from .trees import Trees_v1000 as Trees
     else:
         raise Exception("Version not current supported, please contact support@easyelectrophysiology.com")
@@ -369,18 +369,6 @@ class LoadHeka:
             for series_idx, __ in enumerate(group["ch"]):
                 data_reader.fill_pul_with_data(self.pul, self.fh, group_idx, series_idx)
 
-    def _channel_exists_in_series(self, Im_or_Vm, group_idx, series_idx):
-        """
-        Check the specified channel actually exists in the data (some series only have
-        Im or Vm recordings)
-        """
-        series_channels = self.get_series_channels(group_idx, series_idx)
-        for channel in series_channels:
-            if channel["unit"] == "V" and Im_or_Vm == "Vm" or \
-                    channel["unit"] == "A" and Im_or_Vm == "Im":
-                return True
-        return False
-
     def get_stimulus_for_series(self, group_idx, series_idx):
 
         if self.version in OLD_VERSIONS:
@@ -403,7 +391,7 @@ class LoadHeka:
 # Public_functions
 # ----------------------------------------------------------------------------------------------------------------------------------------------------
 
-    def get_series_data(self, Im_or_Vm, group_idx, series_idx, include_stim_protocol=False, fill_with_mean=False):
+    def get_series_data(self, group_idx, series_idx, channel_idx, include_stim_protocol=False, fill_with_mean=False):
         """
         Convenience function to extract Im or Vm channel data from a series. If the data has not already been loaded into memeory,
         it will be loaded into the pulse tree prior to beign returned in a more convenient form with this method. Output is in
@@ -413,14 +401,14 @@ class LoadHeka:
 
         Logic: in some instances the data for a channel will not exist, however the stimulus protocol still will and a
                pulse record will exist for it. As such we need to act like the data exists and collect all other information
-               inlcuding the stimulus protocol. This leaads to the slightly strange organisation of this function, which could be refactored.
+               including the stimulus protocol. This leaads to the slightly strange organisation of this function, which could be refactored.
 
         INPUTS:
 
-            Im_or_Vm - "Im" or "Vm" to return current or voltage record
-
             group_idx, series_idx  - the index of the group and series to extract the data from. See print_group_names() and print_series_names
                                      to see indexes.
+
+            channel_idx - the index of the channel to return data from.
 
             include_stim_protocol - also return the series stimulation protocol generated from the StimTree.
 
@@ -454,13 +442,10 @@ class LoadHeka:
             "num_samples": [],
             "t_starts": [],
             "t_stops": [],
+            "units": [],
             "stim": None,
             "dtype": "float64",  # note these are after prorcessing (not the original stored data)
         }
-
-        data_exists = self._channel_exists_in_series(Im_or_Vm, group_idx, series_idx)
-        if not data_exists:
-            return out
 
         num_rows = len(series["ch"])
         max_num_samples = self._get_max_num_samples_from_sweeps_in_series(series["ch"])
@@ -477,42 +462,34 @@ class LoadHeka:
 
         for sweep_idx, sweep in enumerate(series["ch"]):
 
-            assert len(sweep["ch"]) <= 2, "Only sweeps with 2 records is supported, group: {0}, series: {1}, sweep : {2}".format(group_idx + 1,
-                                                                                                                                 series_idx + 1,
-                                                                                                                                 sweep_idx + 1)
-            for rec in sweep["ch"]:
+            units = sweep["ch"][channel_idx]["hd"]["TrYUnit"]
+            out["units"].append(units)
 
-                if rec["hd"]["TrYUnit"] == "A" and Im_or_Vm == "Im" or \
-                        rec["hd"]["TrYUnit"] == "V" and Im_or_Vm == "Vm":
+            ts = sweep["ch"][channel_idx]["hd"]["TrXInterval"]
+            out["ts"].append(ts)
 
-                    ts = rec["hd"]["TrXInterval"]
-                    out["ts"].append(ts)
+            label = sweep["ch"][channel_idx]["hd"]["TrLabel"]
+            out["labels"].append(label)
 
-                    label = rec["hd"]["TrLabel"]
-                    out["labels"].append(label)
+            data_kind = sweep["ch"][channel_idx]["hd"]["TrDataKind"]
+            out["data_kinds"].append(data_kind)
 
-                    data_kind = rec["hd"]["TrDataKind"]
-                    out["data_kinds"].append(data_kind)
+            num_samples = sweep["ch"][channel_idx]["hd"]["TrDataPoints"]
+            out["num_samples"].append(num_samples)
 
-                    num_samples = rec["hd"]["TrDataPoints"]
-                    out["num_samples"].append(num_samples)
+            t_start = sweep["ch"][channel_idx]["hd"]["TrXStart"] + sweep["ch"][channel_idx]["hd"]["TrTimeOffset"]
+            out["t_starts"].append(t_start)
 
-                    t_start = rec["hd"]["TrXStart"] + rec["hd"]["TrTimeOffset"]
-                    out["t_starts"].append(t_start)
+            t_stop = t_start + (num_samples * ts)
+            out["t_stops"].append(t_stop)
 
-                    t_stop = t_start + (num_samples * ts)
-                    out["t_stops"].append(t_stop)
+            out["time"][sweep_idx, :] = np.arange(max_num_samples) * ts + t_start
 
-                    out["time"][sweep_idx, :] = np.arange(max_num_samples) * ts + t_start
+            out["data"][sweep_idx, 0:num_samples] = sweep["ch"][channel_idx]["data"]
 
-                    out["data"][sweep_idx, 0:num_samples] = rec["data"]
-
-                    if len(rec["data"]) < max_num_samples:
-                        fill = np.mean(rec["data"]) if fill_with_mean else np.nan
-                        out["data"][sweep_idx, num_samples:] = fill
-
-                else:
-                    continue
+            if len(sweep["ch"][channel_idx]["data"]) < max_num_samples:
+                fill = np.mean(sweep["ch"][channel_idx]["data"]) if fill_with_mean else np.nan
+                out["data"][sweep_idx, num_samples:] = fill
 
         return out
 

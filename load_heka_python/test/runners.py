@@ -3,7 +3,7 @@ import numpy as np
 from load_heka_python.load_heka import LoadHeka
 from os.path import join
 
-def heka_reader_tester(base_path, version, group_series_to_test, dp_thr=1e-6, assert_time=True, include_stim_protocol=True):
+def heka_reader_tester(base_path, version, group_series_to_test, dp_thr=1e-6, assert_time=True, include_stim_protocol=True, has_leak=False):
     """
     Test the data read my LoadHeka matches the data when loading into Patchmaster. Data must be exported from Patchmaster
     using 'Export Sweep' as ascii for comparison with LoadHeka. See the main README.md (section 5) on details
@@ -39,22 +39,39 @@ def heka_reader_tester(base_path, version, group_series_to_test, dp_thr=1e-6, as
         filename = version + "_group-{0}_series-{1}.asc".format(group_num,
                                                                 series_num)
 
-        raw_heka = read_heka_test_ascii(join(base_path, version, filename))
+        raw_heka = read_heka_test_ascii(join(base_path, version, filename), has_leak)
+
+        # calculate number of channels (if channel not included in ascii it will
+        # be all Nan.
+        num_channels = np.sum(
+            [not np.all(np.isnan(np.hstack(raw_heka["Im"]))), not np.all(np.isnan(np.hstack(raw_heka["Vm"])))],
+        dtype=np.int64
+        )
+        if "leak" in raw_heka.keys():
+            num_channels += 1
 
         supress_time = supress_stim = False
-        for im_or_vm in ["Im", "Vm"]:
+        for channel_idx in range(num_channels):
 
-            load_heka = heka_file.get_series_data(im_or_vm,
-                                                  int(group_num) - 1,
-                                                  int(series_num) - 1,
-                                                  include_stim_protocol=include_stim_protocol,
-                                                  fill_with_mean=True)
+            load_heka = heka_file.get_series_data(
+                int(group_num) - 1,
+                int(series_num) - 1,
+                channel_idx,
+                include_stim_protocol=include_stim_protocol,
+                fill_with_mean=True
+            )
+
+            if load_heka["data_kinds"][0]["IsLeak"]:
+                channel_type = "leak"
+            else:
+                channel_type = "Im" if load_heka["units"][0] == "A" else "Vm"
+
             test = SeriesTest(raw_heka,
                               load_heka,
                               group_num,
                               series_num,
                               dp_thr,
-                              im_or_vm,
+                              channel_type,
                               assert_time,
                               supress_time,
                               supress_stim,
@@ -67,8 +84,9 @@ def heka_reader_tester(base_path, version, group_series_to_test, dp_thr=1e-6, as
 
         print("\n")
 
+
 class SeriesTest:
-    def __init__(self, raw_heka, load_heka, group_num, series_num, dp_thr, im_or_vm, assert_time, supress_time, supress_stim):
+    def __init__(self, raw_heka, load_heka, group_num, series_num, dp_thr, channel_type, assert_time, supress_time, supress_stim):
         """
         Class to test the Data (Im or Vm), reconstructed stimulus and time against exported Patchmaster data. Data is converted to pA
         and mV. For a reason that is not clear, the output of the Im and Vm data does not match HEKA perfectly, but to around 5 decimal
@@ -93,7 +111,7 @@ class SeriesTest:
         self.load_heka = load_heka
         self.group_num = group_num
         self.series_num = series_num
-        self.im_or_vm = im_or_vm
+        self.channel_type = channel_type
         self.assert_time = assert_time
         self.dp_thr = dp_thr
         self.stim_tested_flag = False
@@ -111,7 +129,7 @@ class SeriesTest:
         all_assert = []
         if np.any(self.load_heka["data"]):
 
-            for raw_heka_sweep, load_heka_sweep in zip(self.raw_heka[self.im_or_vm],
+            for raw_heka_sweep, load_heka_sweep in zip(self.raw_heka[self.channel_type],
                                                        self.load_heka["data"]):
 
                 raw = self.clean_data(raw_heka_sweep, expected_len=len(load_heka_sweep))
@@ -120,8 +138,8 @@ class SeriesTest:
                 all_assert.append(np.allclose(raw, loaded, rtol=0, atol=self.dp_thr))
 
             assert all(all_assert), "group {0} series {1} does not match Patchmaster to {2} decimal places".format(self.group_num,
-                                                                                                                   self.series_num,
-                                                                                                                   self.printable_dp())
+                                                                                                                       self.series_num,
+                                                                                                                       self.printable_dp())
             print("group {0} series {1} matches Patchmaster to exactly {2} decimal places".format(self.group_num, self.series_num, self.printable_dp()))
 
 # Test Time ------------------------------------------------------------------------------------------------------------------------------------------
@@ -133,7 +151,7 @@ class SeriesTest:
             return
 
         time_sweeps_correct = []
-        for raw_sweep_time, load_heka_sweep_time in zip(self.raw_heka["time_" + self.im_or_vm],
+        for raw_sweep_time, load_heka_sweep_time in zip(self.raw_heka["time_" + self.channel_type],
                                                         self.load_heka["time"]):
 
             sweep_correct = np.allclose(self.clean_time(raw_sweep_time, expected_len=len(load_heka_sweep_time)),
@@ -171,11 +189,11 @@ class SeriesTest:
         if stim_is_close:
             print("stimulus was correctly reconstructed for group {0} series {1} {2}".format(self.group_num,
                                                                                              self.series_num,
-                                                                                             self.im_or_vm))
+                                                                                             self.channel_type))
         else:
             print("stimulus was NOT correctly reconstructed for group {0} series {1} {2}".format(self.group_num,
                                                                                                  self.series_num,
-                                                                                                 self.im_or_vm))
+                                                                                                 self.channel_type))
         self.stim_tested_flag = True
 
         assert stim_is_close, "Stimulus reconstruction does not match Patchmaster to 7 decimal places"
@@ -186,7 +204,7 @@ class SeriesTest:
         raw stim is output from ascii script as ragged array of numpy, so necessary to check they are all the same size.
         We also need to fix the issue with HEKA export output, see __Init__ doc for details
         """
-        raw_heka_output = self.raw_heka["stim_" + self.im_or_vm]
+        raw_heka_output = self.raw_heka["stim_" + self.channel_type]
 
         if not self.all_sweeps_are_same_num_samples(raw_heka_output):
             warnings.warn("stimulus not tested, the record sizes are not equal for all sweeps")
@@ -208,7 +226,7 @@ class SeriesTest:
                 data = self.pad_short_data_with_mean(data, expected_len)
 
         data = self.conv(data,
-                         self.im_or_vm)
+                         self.load_heka["units"][0])
         return data
 
     def clean_time(self, data, expected_len=None):
@@ -288,7 +306,7 @@ class SeriesTest:
 # Read Patchmaster Export Sweep ASCII
 # ----------------------------------------------------------------------------------------------------------------------------------------------------
 
-def read_heka_test_ascii(full_filepath):
+def read_heka_test_ascii(full_filepath, has_leak):
     """
     Read HEKA Export Sweet ASCII data into a dictionary of data.
 
@@ -306,8 +324,8 @@ def read_heka_test_ascii(full_filepath):
     """
     with open(full_filepath) as fh:
 
-        results = make_empty_param_dict()
-        sweep = make_empty_param_dict()
+        results = make_empty_param_dict(has_leak)
+        sweep = make_empty_param_dict(has_leak)
 
         fh.seek(0)
         i = -1
@@ -336,14 +354,14 @@ def read_heka_test_ascii(full_filepath):
 
                     update_results_with_sweep(results, sweep)
 
-                    sweep = make_empty_param_dict()
+                    sweep = make_empty_param_dict(has_leak)
             else:
                 idx_col_offset = 1 if idx_col_present else 0
                 if "[A]" in cols.split(",")[1 + idx_col_offset]:
-                    save_line_to_sweep_dict(line, sweep, first="Im", second="Vm", idx_col_present=idx_col_present, stim_present=stim_present)
+                    save_line_to_sweep_dict(line, sweep, "Im", "Vm", idx_col_present, stim_present, has_leak)
 
                 elif "[V]" in cols.split(",")[1 + idx_col_offset]:
-                    save_line_to_sweep_dict(line, sweep, first="Vm", second="Im", idx_col_present=idx_col_present, stim_present=stim_present)
+                    save_line_to_sweep_dict(line, sweep, "Vm", "Im", idx_col_present, stim_present, has_leak)
                 else:
                     raise Exception("ascii col not recognised")
 
@@ -351,7 +369,8 @@ def read_heka_test_ascii(full_filepath):
 
         return results
 
-def save_line_to_sweep_dict(line, sweep, first, second, idx_col_present, stim_present):
+
+def save_line_to_sweep_dict(line, sweep, first, second, idx_col_present, stim_present, has_leak):
     """
     The output ascii will have either 3 or 6 columns, depending on whether Im and Vm or just Im or Vm records are present.
     They can be in either order (e.g. first 3 cols Vm)
@@ -372,6 +391,9 @@ def save_line_to_sweep_dict(line, sweep, first, second, idx_col_present, stim_pr
         sweep["time_" + second].append(np.nan)
         sweep[second].append(np.nan)
         sweep["stim_" + second].append(np.nan)
+
+    if has_leak:
+        handle_line(sweep, split_line, start_idx=6, stop_idx=9, label="leak", idx_col_present=idx_col_present, stim_present=stim_present)
 
 
 def handle_line(sweep, split_line, start_idx, stop_idx, label, idx_col_present, stim_present):
@@ -398,9 +420,12 @@ def update_results_with_sweep(results, sweep):
     for key, value in sweep.items():
         results[key].append(np.array(value))
 
-def make_empty_param_dict():
+def make_empty_param_dict(has_leak):
     dict_ = {}
-    for key in ["Im", "time_Im", "Vm", "time_Vm", "stim_Im", "stim_Vm"]:
+    keys = ["Im", "time_Im", "Vm", "time_Vm", "stim_Im", "stim_Vm"]
+    if has_leak:
+        keys += ["leak", "time_leak", "stim_leak"]
+    for key in keys:
         dict_[key] = []
 
     return dict_
