@@ -2,6 +2,7 @@ from test import test_load_heka
 from os.path import join, basename, dirname
 import glob
 
+
 def test_file(test_path, dp_thr=1e-6, info_type="max_dp_match", assert_mode=False):
     """
     Convenience function around test_load_heka.test_heka_reader()
@@ -27,9 +28,4 @@ def test_file(test_path, dp_thr=1e-6, info_type="max_dp_match", assert_mode=Fals
 
     group_series_to_test = [[filename.split("group-")[1][0], filename.split("series-")[1][0]] for filename in filenames]
 
-    test_load_heka.test_heka_reader(base_path,
-                                    version,
-                                    group_series_to_test,
-                                    dp_thr,
-                                    info_type,
-                                    assert_mode)
+    test_load_heka.test_heka_reader(base_path, version, group_series_to_test, dp_thr, info_type, assert_mode)

@@ -11,7 +11,16 @@ license = {text = "MIT"}
 
 dependencies = [
     "numpy",
+]
+
+[project.optional-dependencies]
+dev = [
     "pytest",
+    "black",
+    "isort",
+    "mypy",
+    "pre-commit",
+    "ruff",
 ]
 
 [build-system]
@@ -26,3 +35,11 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 include = ["load_heka_python*"]
+
+[tool.black]
+target-version = ['py38', 'py39', 'py310', 'py311']
+skip-string-normalization = false
+line-length = 120
+
+[tool.codespell]
+skip = 'onl,OutOut,InOut'

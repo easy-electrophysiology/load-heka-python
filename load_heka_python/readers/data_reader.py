@@ -2,6 +2,7 @@ import copy
 import numpy as np
 import struct
 
+
 def fill_pul_with_data(pul, fh, group_idx, series_idx):
     """
     Fill the ["data"] field of all pulse tree records for the specified group and series with raw data from file.
@@ -23,27 +24,23 @@ def fill_pul_with_data(pul, fh, group_idx, series_idx):
 
             interleave_size = rec["hd"]["TrInterleaveSize"]
             if interleave_size != 0:
-                assert interleave_size % size == 0, ("`size` does not divide "
-                                                     "evenly `interleave size")
+                assert interleave_size % size == 0, "`size` does not divide " "evenly `interleave size"
 
                 batch_size = int(interleave_size / size)
 
-                assert length % batch_size == 0, ("`length` does not divide "
-                                                  "evenly `batch_size size")
+                assert length % batch_size == 0, "`length` does not divide " "evenly `batch_size size"
                 n_batches = int(length / batch_size)
 
                 data = np.zeros((n_batches * batch_size)).astype(np_dtype)
 
                 for chunk in range(n_batches):
                     fh.seek(start)
-                    chunk_data = struct.unpack(endian + fmt * batch_size,
-                                               fh.read(size * batch_size))
-                    data[chunk * batch_size: chunk * batch_size + batch_size] = np.array(chunk_data, dtype=np_dtype)
+                    chunk_data = struct.unpack(endian + fmt * batch_size, fh.read(size * batch_size))
+                    data[chunk * batch_size : chunk * batch_size + batch_size] = np.array(chunk_data, dtype=np_dtype)
                     start += rec["hd"]["TrInterleaveSkip"]
             else:
                 fh.seek(start)
-                data = struct.unpack(endian + fmt * length,
-                                     fh.read(size * length))
+                data = struct.unpack(endian + fmt * length, fh.read(size * length))
                 data = np.array(data, dtype=np_dtype)
 
             # Scale and recast to float64
@@ -59,11 +56,8 @@ def fill_pul_with_data(pul, fh, group_idx, series_idx):
             run_checks(rec, data, data_kind)
 
 
-
-
 def run_checks(rec, data, data_kind):
-    """
-    """
+    """ """
     assert data_kind["IsLittleEndian"], "big endian data not tested"
     assert not data_kind["IsVirtual"], "isVirtual channels not tested"
 
@@ -73,6 +67,7 @@ def run_checks(rec, data, data_kind):
     assert rec["hd"]["TrGLeak"] == 0.0
     assert rec["hd"]["TrXUnit"] == "s"
     assert rec["hd"]["TrYUnit"] in ["A", "V"]
+
 
 def get_dataformat(idx):
 
@@ -90,9 +85,11 @@ def get_dataformat(idx):
         raise Exception("double datatype not tested")
         return "d", 8, np.float64, "float64"
 
+
 # ----------------------------------------------------------------------------------------------------------------------------------------------------
 # Check Parameters are the Same Across All Sweeps in a Series
 # ----------------------------------------------------------------------------------------------------------------------------------------------------
+
 
 def get_channel_parameters_across_all_series(pul, group_idx):  # DOC THIS
 
@@ -101,8 +98,7 @@ def get_channel_parameters_across_all_series(pul, group_idx):  # DOC THIS
     all_series_channels = []
     for series_idx in range(num_series):
 
-        all_series_channels.append(
-                                   get_series_channels(pul, group_idx, series_idx))
+        all_series_channels.append(get_series_channels(pul, group_idx, series_idx))
 
     results = []
     for series_channel in all_series_channels:
@@ -115,13 +111,13 @@ def get_channel_parameters_across_all_series(pul, group_idx):  # DOC THIS
 
 def get_list_of_channel_info_dicts(num_channels, param_dict):
     """
-    Copy is critiical or all list entries will be a dict at the same memory adress
+    Copy is critical or all list entries will be a dict at the same memory address
     """
     channels = []
     for __ in range(num_channels):
-        channels.append(
-                        copy.deepcopy(param_dict))
+        channels.append(copy.deepcopy(param_dict))
     return channels
+
 
 def get_series_channels(pul, group_idx, series_idx):
 
@@ -147,11 +143,14 @@ def get_series_channels(pul, group_idx, series_idx):
     for chan_idx in range(num_channels):
         for key in param_dict.keys():
             if not len(np.unique(channels[chan_idx][key])) == 1:
-                raise Exception("channel parameters are not the same across series for '{0}' series {1}".format(key, series_idx))
+                raise Exception(
+                    "channel parameters are not the same across series for '{0}' series {1}".format(key, series_idx)
+                )
 
             results[chan_idx][key] = channels[chan_idx][key][0]
 
     return results
+
 
 def get_max_num_channels_in_series(pul, group_idx, series_idx):
 
@@ -167,20 +166,22 @@ def get_max_num_channels_in_series(pul, group_idx, series_idx):
 def check_sweep_params_are_equal_for_every_series_in_file(pul):
     """
     Check that parameters assumed to be the same across a series (within within or between Im and Vm records) are so
-    for all series (but not necssarily between series or groups)
+    for all series (but not necessarily between series or groups)
     """
     for group_idx, group in enumerate(pul["ch"]):
         for series_idx, series in enumerate(group["ch"]):
 
             recs_in_sweeps = np.unique([len(sweep["ch"]) for sweep in series["ch"]])
-            assert len(recs_in_sweeps) == 1, "number of recs is not equal for al sweeps in group: {0}, series: {1}".format(group_idx,
-                                                                                                                           series_idx)
+            assert (
+                len(recs_in_sweeps) == 1
+            ), "number of recs is not equal for al sweeps in group: {0}, series: {1}".format(group_idx, series_idx)
             for param_key in ["TrDataScaler", "TrYUnit", "TrDataFormat", "TrAdcChannel", "TrRecordingMode"]:
                 for rec_idx in range(recs_in_sweeps[0]):
                     check_sweep_params_are_equal(pul, group_idx, series_idx, rec_idx, param_key)
 
             for param_key in ["TrXUnit", "TrXInterval", "TrCellPotential"]:
                 check_sweep_params_are_equal(pul, group_idx, series_idx, "all", param_key)
+
 
 def check_sweep_params_are_equal(pul, group_idx, series_idx, rec_idx, param_key):
     """
@@ -202,7 +203,6 @@ def check_sweep_params_are_equal(pul, group_idx, series_idx, rec_idx, param_key)
 
     all_equal = True if np.unique(params).size == 1 else False
 
-    assert all_equal, "Group: {0}, Series: {1} {2} parameters are not the same for all sweeps, records: {3}".format(group_idx,
-                                                                                                                    series_idx,
-                                                                                                                    param_key,
-                                                                                                                    rec_idx)
+    assert all_equal, "Group: {0}, Series: {1} {2} parameters are not the same for all sweeps, records: {3}".format(
+        group_idx, series_idx, param_key, rec_idx
+    )
