@@ -75,14 +75,14 @@ def get_dataformat(idx):
         return "h", 2, np.int16, "int16"
 
     elif idx == 1:
-        raise Exception("int32 datatype not tested ")
+        raise BaseException("int32 datatype not tested ")
         return "i", 4, np.int32, "int32"
 
     elif idx == 2:
         return "f", 4, np.float32, "float32"
 
     elif idx == 3:
-        raise Exception("double datatype not tested")
+        raise BaseException("double datatype not tested")
         return "d", 8, np.float64, "float64"
 
 
@@ -143,7 +143,7 @@ def get_series_channels(pul, group_idx, series_idx):
     for chan_idx in range(num_channels):
         for key in param_dict.keys():
             if not len(np.unique(channels[chan_idx][key])) == 1:
-                raise Exception(
+                raise BaseException(
                     "channel parameters are not the same across series for '{0}' series {1}".format(key, series_idx)
                 )
 

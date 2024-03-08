@@ -39,7 +39,7 @@ def _import_trees(header):
     ]:
         from .trees import Trees_v1000 as Trees
     else:
-        raise Exception("Version not current supported, please contact support@easyelectrophysiology.com")
+        raise BaseException("Version not current supported, please contact support@easyelectrophysiology.com")
 
     return Trees
 
@@ -94,7 +94,7 @@ class LoadHeka:
         header = self._unpack_header(BundleHeader())
 
         if not header["oIsLittleEndian"]:
-            raise Exception("Big endian on the header not tested ")
+            raise BaseException("Big endian on the header not tested ")
             self.fh.seek(0)
             header = self._unpack_header(BundleHeader(), ">")
 
@@ -373,7 +373,7 @@ class LoadHeka:
             endian = "<"
         elif magic == b"Tree":
             endian = ">"
-            raise Exception("Big endian not tested yet")
+            raise BaseException("Big endian not tested yet")
 
         levels = struct.unpack(endian + "i", self.fh.read(4))[0]
         sizes = struct.unpack(endian + "i" * levels, self.fh.read(4 * levels))
