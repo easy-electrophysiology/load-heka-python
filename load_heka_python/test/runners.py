@@ -46,14 +46,7 @@ def heka_reader_tester(
 
         raw_heka = read_heka_test_ascii(join(base_path, version, filename), has_leak)
 
-        # calculate number of channels (if channel not included in ascii it will
-        # be all Nan.
-        num_channels = np.sum(
-            [not np.all(np.isnan(np.hstack(raw_heka["Im"]))), not np.all(np.isnan(np.hstack(raw_heka["Vm"])))],
-            dtype=np.int64,
-        )
-        if "leak" in raw_heka.keys():
-            num_channels += 1
+        num_channels = num_channels_from_raw_heka(raw_heka)
 
         supress_time = supress_stim = False
         for channel_idx in range(num_channels):
@@ -89,6 +82,21 @@ def heka_reader_tester(
                 supress_time = True
 
         print("\n")
+
+
+def num_channels_from_raw_heka(raw_heka):
+    """
+    Calculate number of channels (if channel not
+    included in ascii it will be all Nan.
+    """
+    num_channels = np.sum(
+        [not np.all(np.isnan(np.hstack(raw_heka["Im"]))), not np.all(np.isnan(np.hstack(raw_heka["Vm"])))],
+        dtype=np.int64,
+    )
+    if "leak" in raw_heka.keys():
+        num_channels += 1
+
+    return num_channels
 
 
 class SeriesTest:

@@ -24,7 +24,7 @@ def test_file(test_path, dp_thr=1e-6, info_type="max_dp_match", assert_mode=Fals
     filenames = list(map(basename, ascii_files))
 
     if len(ascii_files) == 0:
-        raise Exception("no files found in " + base_path)
+        raise BaseException("no files found in " + base_path)
 
     group_series_to_test = [[filename.split("group-")[1][0], filename.split("series-")[1][0]] for filename in filenames]
 
