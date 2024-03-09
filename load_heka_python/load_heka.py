@@ -450,24 +450,23 @@ class LoadHeka:
             If include_stim_protocol is True, the "stim" field will contain a sweep x stimulation numpy array containing the fill
             stim protocol for the series. see stim_reader.py for details on supported stimulation protocols. If the StimTree cannot
             be reconstructed a warning will be shown and the field False.
-
-        TODO: needs refactoring, too long
-
         """
         series = self.pul["ch"][group_idx]["ch"][series_idx]
 
         out = {
+            "name": [],
             "data": None,
             "time": None,
             "labels": [],
-            "ts": [],
+            "recording_mode": [],
             "data_kinds": [],
             "num_samples": [],
             "t_starts": [],
             "t_stops": [],
             "units": [],
             "stim": None,
-            "dtype": "float64",  # note these are after prorcessing (not the original stored data)
+            "sampling_step": [],
+            "dtype": "float64",  # note this is after processing (not the original stored data)
         }
 
         num_rows = len(series["ch"])
@@ -484,11 +483,14 @@ class LoadHeka:
 
         for sweep_idx, sweep in enumerate(series["ch"]):
 
+            name = sweep["ch"][channel_idx]["hd"]["TrLabel"]
+            out["name"].append(name)
+
             units = sweep["ch"][channel_idx]["hd"]["TrYUnit"]
             out["units"].append(units)
 
-            ts = sweep["ch"][channel_idx]["hd"]["TrXInterval"]
-            out["ts"].append(ts)
+            recording_mode = sweep["ch"][channel_idx]["hd"]["TrRecordingMode"]
+            out["recording_mode"].append(recording_mode)
 
             label = sweep["ch"][channel_idx]["hd"]["TrLabel"]
             out["labels"].append(label)
@@ -498,6 +500,9 @@ class LoadHeka:
 
             num_samples = sweep["ch"][channel_idx]["hd"]["TrDataPoints"]
             out["num_samples"].append(num_samples)
+
+            ts = sweep["ch"][channel_idx]["hd"]["TrXInterval"]
+            out["sampling_step"].append(ts)
 
             t_start = sweep["ch"][channel_idx]["hd"]["TrXStart"] + sweep["ch"][channel_idx]["hd"]["TrTimeOffset"]
             out["t_starts"].append(t_start)
@@ -513,9 +518,18 @@ class LoadHeka:
                 fill = np.mean(sweep["ch"][channel_idx]["data"]) if fill_with_mean else np.nan
                 out["data"][sweep_idx, num_samples:] = fill
 
+        for key in out.keys():
+            if isinstance(out[key], list) and key not in ["t_starts", "t_stops", "num_samples", "data_kinds"]:
+                assert self.all_equal(out[key]), (
+                    "Key parameters that differ " "across sweeps are not currently supported."
+                )
+                out[key] = out[key][0]
         return out
 
     # Print Names ----------------------------------------------------------------------------------------------------------------------------------------
+
+    def all_equal(self, list_):
+        return list_.count(list_[0]) == len(list_)
 
     def print_group_names(self):
         for group_idx, group in enumerate(self.pul["ch"]):

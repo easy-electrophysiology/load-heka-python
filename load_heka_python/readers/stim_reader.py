@@ -11,10 +11,10 @@ warnings.simplefilter("always", UserWarning)
 
 def get_stimulus_for_series(pul, pgf, group_idx, series_idx):
     """
-    Reconstruct the stimulus from the stimulis protocol stored in StimTree.
+    Reconstruct the stimulus from the stimulus protocol stored in StimTree.
 
-    If the number of sweeps in the recorded data is less than the full protocol, the stim protocol
-    will be cut to match the data.
+    If the number of sweeps in the recorded data is less than the full protocol,
+    the stim protocol will be cut to match the data.
     """
     stim_sweep, pul_sweep, num_sweeps_in_recorded_data = get_sweep_info(pul, pgf, group_idx, series_idx)
 
@@ -53,7 +53,9 @@ def get_dac_and_important_params(stim_sweep):
     """ """
     dac = stim_sweep["ch"][0]
     info = {
-        "ts": stim_sweep["hd"]["stSampleInterval"],
+        "name": "dac",
+        "dtype": "float64",  # note this is after processing (not the original stored data)
+        "sampling_step": stim_sweep["hd"]["stSampleInterval"],
         "num_sweeps": stim_sweep["hd"]["stNumberSweeps"],
         "units": dac["hd"]["chDacUnit"],
         "holding": dac["hd"]["chHolding"],
@@ -61,12 +63,13 @@ def get_dac_and_important_params(stim_sweep):
     }
 
     if info["units"] == "mV":
+        # weird heka feature where stim is as mV but stored in A, I think mV might just be how it is displayed in patchmaster
         warnings.warn(
             "Stimulus units are specified {0} but (almost certainly) stored as V). Please check. Updating to V.".format(
                 info["units"]
             )
         )  # e.g. 1 instance of units mV but the data was still stored as V...
-        info["untis"] = "V"
+        info["units"] = "V"
 
     return dac, info
 
@@ -104,6 +107,10 @@ def check_data(data, sweep, num_sweeps_in_recorded_data):
         num_sweeps_in_recorded_data == data.shape[0]
     ), "reconstructed stimulus size cannot be made equal to recorded number of sweeps"
 
+    assert data.dtype == "float64", (
+        "Output of stim data should be float64," "if it has changed also check info['dtype'] setting."
+    )
+
     return True
 
 
@@ -123,7 +130,7 @@ def create_stimulus_waveform_from_segments(segments, info, num_sweeps_in_recorde
     TODO: needs refactoring, see StimSegment()
     """
     num_samples = sum([segment.num_samples for segment in segments])
-    data = np.full([info["num_sweeps"], num_samples], np.nan)
+    data = np.full([info["num_sweeps"], num_samples], np.nan, dtype=np.float64)
 
     for sweep in range(info["num_sweeps"]):
         i = 0
@@ -182,7 +189,7 @@ class StimSegment:
         self.voltage_idx = dac_header[
             "seVoltageSource"
         ]  # index of the 'Voltage' dropdown menu (i.e. specify value, Holding, p1....)
-        self.ts = info["ts"]
+        self.ts = info["sampling_step"]
         self.use_relative = info["use_relative"]
         self.holding = info["holding"]
         self.num_samples = np.round(self.duration / self.ts).astype(int)
