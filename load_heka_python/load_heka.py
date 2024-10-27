@@ -392,13 +392,15 @@ class LoadHeka:
             for series_idx, __ in enumerate(group["ch"]):
                 data_reader.fill_pul_with_data(self.pul, self.fh, group_idx, series_idx)
 
-    def get_stimulus_for_series(self, group_idx, series_idx):
+    def get_stimulus_for_series(self, group_idx, series_idx, stim_chanel_idx, experimental_mode):
 
         if self.version in OLD_VERSIONS:
             warnings.warn("Stimulus reconstruction for versions before 2x90 is not supported")
             return False
 
-        series_stim = stim_reader.get_stimulus_for_series(self.pul, self.pgf, group_idx, series_idx)
+        series_stim = stim_reader.get_stimulus_for_series(
+            self.pul, self.pgf, group_idx, series_idx, stim_chanel_idx, experimental_mode
+        )
         return series_stim
 
     @staticmethod
@@ -414,7 +416,15 @@ class LoadHeka:
     # Public_functions
     # ----------------------------------------------------------------------------------------------------------------------------------------------------
 
-    def get_series_data(self, group_idx, series_idx, channel_idx, include_stim_protocol=False, fill_with_mean=False):
+    def get_series_data(
+        self,
+        group_idx,
+        series_idx,
+        channel_idx,
+        include_stim_protocol=False,
+        fill_with_mean=False,
+        stim_chanel_idx=None,
+    ):
         """
         Convenience function to extract Im or Vm channel data from a series. If the data has not already been loaded into memory,
         it will be loaded into the pulse tree prior to beign returned in a more convenient form with this method. Output is in
@@ -433,10 +443,15 @@ class LoadHeka:
 
             channel_idx - the index of the channel to return data from.
 
-            include_stim_protocol - also return the series stimulation protocol generated from the StimTree.
+            include_stim_protocol - If `True`, also return the series stimulation protocol generated from the StimTree. If "experimental",
+                                    reconstruct stimuli patterns based on assumptions on how HEKA's metadata organisation and may miss scaling
+                                    factors. Check the reconstructed stimuli carefully. https://www.warneronline.com/sites/default/files/2018-08/Chartmaster_Manual.pdf
 
             fill_with_mean - by default, if sweep data is smaller than others in the series, it will be padded with NaN. This option
                              will override this and set as the mean of the trace.
+
+            stim_channel_index - if `None`, the first stimulus channel with a non-zero seVoltage field will be used. Otherwise,
+                                 this can be manually specified with an integer index.
 
         OUTPUTS:
             dictionary of parameters (see out below). For each sweep, the parameter value is appended to a list. This is somewhat redundant
@@ -476,7 +491,9 @@ class LoadHeka:
             data_reader.fill_pul_with_data(self.pul, self.fh, group_idx, series_idx)
 
         if include_stim_protocol:
-            out["stim"] = self.get_stimulus_for_series(group_idx, series_idx)
+            out["stim"] = self.get_stimulus_for_series(
+                group_idx, series_idx, stim_chanel_idx, experimental_mode=include_stim_protocol == "experimental"
+            )
 
         for key in ["data", "time"]:
             out[key] = np.full([num_rows, max_num_samples], np.nan)

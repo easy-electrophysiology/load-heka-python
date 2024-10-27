@@ -9,7 +9,7 @@ warnings.simplefilter("always", UserWarning)
 # ----------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-def get_stimulus_for_series(pul, pgf, group_idx, series_idx):
+def get_stimulus_for_series(pul, pgf, group_idx, series_idx, stim_chanel_idx, experimental_mode):
     """
     Reconstruct the stimulus from the stimulus protocol stored in StimTree.
 
@@ -18,9 +18,9 @@ def get_stimulus_for_series(pul, pgf, group_idx, series_idx):
     """
     stim_sweep, pul_sweep, num_sweeps_in_recorded_data = get_sweep_info(pul, pgf, group_idx, series_idx)
 
-    dac, info = get_dac_and_important_params(stim_sweep)
+    dac, info = get_dac_and_important_params(stim_sweep, stim_chanel_idx)
 
-    if not check_header(dac):
+    if not check_header(dac, experimental_mode):
         return False
 
     segments = read_segments_into_classes(dac, info)
@@ -31,6 +31,7 @@ def get_stimulus_for_series(pul, pgf, group_idx, series_idx):
         return False
 
     info["data"] = data
+
     return info
 
 
@@ -49,9 +50,30 @@ def get_sweep_info(pul, pgf, group_idx, series_idx):
     return stim_sweep, pul_sweep, num_sweeps_in_recorded_data
 
 
-def get_dac_and_important_params(stim_sweep):
-    """ """
-    dac = stim_sweep["ch"][0]
+def get_dac_and_important_params(stim_sweep, stim_chanel_idx):
+    """
+    Guessing from the (as far as known, undocumented) stimulus structure
+    organisation, we have:
+
+    stim_sweep : "hd" and "ch" for stimulus protocols
+
+    For each channel, we have chan["hd"] or chan["ch"] containing
+    information on each 'segment' of the stimulus. The stimulus division
+    into segments splits the stimulus by pulse information. So, if we have for
+    example a stimulus with two pulses, we will have 5 segments
+    (baseline, first pulse, baseline, second pulse, baseline) with information
+    on the signal and period length for each segment. The "hd" holds the
+    stimulus metadata.
+    """
+    if stim_chanel_idx is None:
+        for idx, chan in enumerate(stim_sweep["ch"]):
+            for inner_chan in chan["ch"]:
+                if inner_chan["hd"]["seVoltage"] != 0:
+                    stim_chanel_idx = idx
+                    break
+
+    dac = stim_sweep["ch"][stim_chanel_idx]
+
     info = {
         "name": "dac",
         "dtype": "float64",  # note this is after processing (not the original stored data)
@@ -74,23 +96,28 @@ def get_dac_and_important_params(stim_sweep):
     return dac, info
 
 
-def check_header(dac):
+def check_header(dac, experimental_mode):
 
-    if not dac["hd"]["chStimToDacID"]["UseStimScale"]:
+    if not dac["hd"]["chStimToDacID"]["UseStimScale"] and not experimental_mode:
         warnings.warn("Only StimScale supported, stimulus protocol not reconstructed")
         return False
 
-    for key in [
+    untested_metadata_keywords = [
         "UseFileTemplate",
         "UseForLockIn",
         "UseForWavelength",
-        "UseScaling",
         "UseForChirp",
         "UseForImaging",
-    ]:  # UseRelative often on, test
+    ]
+
+    if not experimental_mode:
+        untested_metadata_keywords.append("UseScaling")
+
+    for key in untested_metadata_keywords:
         if dac["hd"]["chStimToDacID"][key]:
             warnings.warn("Parameter {0} not tested, stimulus protocol not reconstructed".format(key))
             return False
+
     return True
 
 
