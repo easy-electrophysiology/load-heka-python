@@ -61,7 +61,7 @@ class LoadHeka:
           contact HEKA and get their structure information.
     """
 
-    def __init__(self, full_filepath, only_load_header=False):
+    def __init__(self, full_filepath):
 
         self.Trees = None  # filled with import once version is known
         self.full_filepath = full_filepath
@@ -84,9 +84,6 @@ class LoadHeka:
             self.sol = self._get_sol()
             self.mrk = self._get_mrk()
             self.onl = self._get_onl()
-
-        if not only_load_header:
-            self._fill_pul_recs_with_data()
 
     def _get_header(self):
         """ """
@@ -193,10 +190,6 @@ class LoadHeka:
                 return item["oStart"], item["oLength"]
 
         return False, False
-
-    def _fill_pul_recs_with_data(self):
-        data_reader.check_sweep_params_are_equal_for_every_series_in_file(self.pul)
-        self._fill_entire_file_pul_with_data()
 
     def __enter__(self):
         """
@@ -380,26 +373,14 @@ class LoadHeka:
 
         return endian, levels, sizes
 
-    def _fill_entire_file_pul_with_data(self):
-        """
-        The pulse tree is essentially a tree of header information that contains no data. The data is read from the start
-        of the file based on pointers contained in the pulse tree.
-
-        For convenience, when the data is read from the file it is stored in the corresponding pulse tree record. Public functions (see below)
-        are used to extract this in more conveient formats.
-        """
-        for group_idx, group in enumerate(self.pul["ch"]):
-            for series_idx, __ in enumerate(group["ch"]):
-                data_reader.fill_pul_with_data(self.pul, self.fh, group_idx, series_idx)
-
-    def get_stimulus_for_series(self, group_idx, series_idx, stim_chanel_idx, experimental_mode):
+    def get_stimulus_for_series(self, group_idx, series_idx, stim_channel_idx, experimental_mode):
 
         if self.version in OLD_VERSIONS:
             warnings.warn("Stimulus reconstruction for versions before 2x90 is not supported")
             return False
 
         series_stim = stim_reader.get_stimulus_for_series(
-            self.pul, self.pgf, group_idx, series_idx, stim_chanel_idx, experimental_mode
+            self.pul, self.pgf, group_idx, series_idx, stim_channel_idx, experimental_mode
         )
         return series_stim
 
@@ -423,7 +404,8 @@ class LoadHeka:
         channel_idx,
         include_stim_protocol=False,
         fill_with_mean=False,
-        stim_chanel_idx=None,
+        add_zero_offset=True,
+        stim_channel_idx=None,
     ):
         """
         Convenience function to extract Im or Vm channel data from a series. If the data has not already been loaded into memory,
@@ -454,9 +436,7 @@ class LoadHeka:
                                  this can be manually specified with an integer index.
 
         OUTPUTS:
-            dictionary of parameters (see out below). For each sweep, the parameter value is appended to a list. This is somewhat redundant
-            as many of these parameters are checked that they are equal in check_sweep_params_are_equal_for_every_series_in_file(). However
-            while verbose this is kept for now as the HEKA filetype is very dynamic, and better to be clearer in case of unexpected edge cases.
+            dictionary of parameters (see out below). For each sweep, the parameter value is appended to a list.
 
             As well as relevant parameters for the record, the "data" field contains a sweep x num samples numpy array of all sweeps from the series. If
             a sweep has less samples in it than the others, the end of the row will be padded with Nan (unless fill_with_mean is set, in which
@@ -487,12 +467,14 @@ class LoadHeka:
         num_rows = len(series["ch"])
         max_num_samples = self._get_max_num_samples_from_sweeps_in_series(series["ch"])
 
-        if not np.any(series["ch"][0]["ch"][0]["data"]):
-            data_reader.fill_pul_with_data(self.pul, self.fh, group_idx, series_idx)
+        if np.any(series["ch"][0]["ch"][0]["data"]):
+            warnings.warn("Data already exists for the group, series index. Overwriting...")
+
+        data_reader.fill_pul_with_data(self.pul, self.fh, group_idx, series_idx, add_zero_offset)
 
         if include_stim_protocol:
             out["stim"] = self.get_stimulus_for_series(
-                group_idx, series_idx, stim_chanel_idx, experimental_mode=include_stim_protocol == "experimental"
+                group_idx, series_idx, stim_channel_idx, experimental_mode=include_stim_protocol == "experimental"
             )
 
         for key in ["data", "time"]:

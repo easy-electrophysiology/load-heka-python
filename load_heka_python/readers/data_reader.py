@@ -3,7 +3,7 @@ import numpy as np
 import struct
 
 
-def fill_pul_with_data(pul, fh, group_idx, series_idx):
+def fill_pul_with_data(pul, fh, group_idx, series_idx, add_zero_offset):
     """
     Fill the ["data"] field of all pulse tree records for the specified group and series with raw data from file.
 
@@ -46,10 +46,26 @@ def fill_pul_with_data(pul, fh, group_idx, series_idx):
             # Scale and recast to float64
             if np_dtype in [np.int16, np.int32]:
                 scaling_factor = np.array(rec["hd"]["TrDataScaler"], dtype=np.float64)
-                data = (data * scaling_factor) - rec["hd"]["TrZeroData"]
+
+                data = data * scaling_factor
+
+                if add_zero_offset:
+                    data -= rec["hd"]["TrZeroData"]
 
             elif np_dtype == np.float32:
+                raise NotImplemented(
+                    "The zero scaling on float32 data must be checked. Please contact "
+                    "Easy Electrophysiology. To revert to previous behaviour, downgrade "
+                    "to v1.0.0"
+                )
                 data = data.astype(np.float64)
+
+            elif np_dtype == np.float64:
+                raise NotImplemented(
+                    "The zero scaling on float64 data must be checked. Please contact "
+                    "Easy Electrophysiology. To revert to previous behaviour, downgrade "
+                    "to v1.0.0"
+                )
 
             rec["data"] = data
 
@@ -91,7 +107,7 @@ def get_dataformat(idx):
 # ----------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-def get_channel_parameters_across_all_series(pul, group_idx):  # DOC THIS
+def get_channel_parameters_across_all_series(pul, group_idx):
 
     num_series = len(pul["ch"][group_idx]["ch"])
 

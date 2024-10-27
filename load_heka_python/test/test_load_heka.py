@@ -244,3 +244,78 @@ class TestFiles:
         heka_reader_tester(
             base_path, version, group_num_series_num_to_test, dp_thr=1e-04, include_stim_protocol=False, has_leak=True
         )
+
+    def test_f15_zero_offset_on(self, base_path):
+        version = "f15_offset_on"
+        group_num_series_num_to_test = [["1", "6"]]
+        heka_reader_tester(
+            base_path,
+            version,
+            group_num_series_num_to_test,
+            dp_thr=1e-04,
+            include_stim_protocol=True,
+            add_zero_offset=True,
+        )
+
+    def test_f15_zero_offset_off(self, base_path):
+        version = "f15_offset_off"
+        group_num_series_num_to_test = [["1", "6"]]
+        heka_reader_tester(
+            base_path,
+            version,
+            group_num_series_num_to_test,
+            dp_thr=1e-04,
+            include_stim_protocol=True,
+            add_zero_offset=False,
+        )
+
+    def test_f15_for_all_stimulus_settings(self, base_path):
+        from load_heka_python.load_heka import LoadHeka
+        import numpy as np
+        from pathlib import Path
+
+        version = "f15_stimulus"
+
+        full_path_to_file = Path(base_path) / version / f"{version}.dat"
+
+        heka_file = LoadHeka(full_path_to_file)
+
+        series_data = heka_file.get_series_data(
+            group_idx=0,
+            series_idx=16,
+            channel_idx=0,
+            include_stim_protocol=True,
+            stim_channel_idx=0,
+        )
+
+        assert np.all(series_data["stim"]["data"] == series_data["stim"]["data"][0, 0])
+
+        import matplotlib.pyplot as plt
+
+        series_data = heka_file.get_series_data(
+            group_idx=0,
+            series_idx=16,
+            channel_idx=0,
+            include_stim_protocol=True,
+            add_zero_offset=False,
+            stim_channel_idx=1,
+        )
+
+        assert series_data["stim"] is False
+
+        from scipy.signal import find_peaks
+
+        with pytest.warns() as warning:
+            series_data = heka_file.get_series_data(
+                group_idx=0,
+                series_idx=16,
+                channel_idx=0,
+                include_stim_protocol="experimental",
+                add_zero_offset=False,
+                stim_channel_idx=1,
+            )
+        assert "Data already exists" in str(warning[0].message)
+
+        for rec_data in series_data["stim"]["data"]:
+            peak_idx = find_peaks(rec_data)[0]
+            assert np.array_equal(peak_idx, [2004, 4014, 6024, 8034, 10044])

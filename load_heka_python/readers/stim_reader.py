@@ -9,7 +9,7 @@ warnings.simplefilter("always", UserWarning)
 # ----------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-def get_stimulus_for_series(pul, pgf, group_idx, series_idx, stim_chanel_idx, experimental_mode):
+def get_stimulus_for_series(pul, pgf, group_idx, series_idx, stim_channel_idx, experimental_mode):
     """
     Reconstruct the stimulus from the stimulus protocol stored in StimTree.
 
@@ -18,7 +18,7 @@ def get_stimulus_for_series(pul, pgf, group_idx, series_idx, stim_chanel_idx, ex
     """
     stim_sweep, pul_sweep, num_sweeps_in_recorded_data = get_sweep_info(pul, pgf, group_idx, series_idx)
 
-    dac, info = get_dac_and_important_params(stim_sweep, stim_chanel_idx)
+    dac, info = get_dac_and_important_params(stim_sweep, stim_channel_idx)
 
     if not check_header(dac, experimental_mode):
         return False
@@ -50,7 +50,7 @@ def get_sweep_info(pul, pgf, group_idx, series_idx):
     return stim_sweep, pul_sweep, num_sweeps_in_recorded_data
 
 
-def get_dac_and_important_params(stim_sweep, stim_chanel_idx):
+def get_dac_and_important_params(stim_sweep, stim_channel_idx):
     """
     Guessing from the (as far as known, undocumented) stimulus structure
     organisation, we have:
@@ -65,14 +65,17 @@ def get_dac_and_important_params(stim_sweep, stim_chanel_idx):
     on the signal and period length for each segment. The "hd" holds the
     stimulus metadata.
     """
-    if stim_chanel_idx is None:
+    if stim_channel_idx is None:
         for idx, chan in enumerate(stim_sweep["ch"]):
             for inner_chan in chan["ch"]:
                 if inner_chan["hd"]["seVoltage"] != 0:
-                    stim_chanel_idx = idx
+                    stim_channel_idx = idx
                     break
 
-    dac = stim_sweep["ch"][stim_chanel_idx]
+    if stim_channel_idx is None:
+        stim_channel_idx = 0
+
+    dac = stim_sweep["ch"][stim_channel_idx]
 
     info = {
         "name": "dac",
