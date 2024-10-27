@@ -57,23 +57,11 @@ def fill_pul_with_data(pul, fh, group_idx, series_idx, add_zero_offset):
 
                 data = data * scaling_factor
 
-                if add_zero_offset:
-                    data -= rec["hd"]["TrZeroData"]
-
             elif np_dtype == np.float32:
-                raise NotImplementedError(
-                    "The zero scaling on float32 data must be checked. Please contact "
-                    "Easy Electrophysiology. To revert to previous behaviour, downgrade "
-                    "to v1.0.0"
-                )
                 data = data.astype(np.float64)
 
-            elif np_dtype == np.float64:
-                raise NotImplementedError(
-                    "The zero scaling on float64 data must be checked. Please contact "
-                    "Easy Electrophysiology. To revert to previous behaviour, downgrade "
-                    "to v1.0.0"
-                )
+            if add_zero_offset:
+                data -= rec["hd"]["TrZeroData"]
 
             rec["data"] = data
 

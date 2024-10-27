@@ -433,6 +433,8 @@ class LoadHeka:
             fill_with_mean - by default, if sweep data is smaller than others in the series, it will be padded with NaN. This option
                              will override this and set as the mean of the trace.
 
+            add_zero_offset - if `True`, offset is added to scale the resting potential to zero.
+
             stim_channel_index - if `None`, the first stimulus channel with a non-zero seVoltage field will be used. Otherwise,
                                  this can be manually specified with an integer index.
 

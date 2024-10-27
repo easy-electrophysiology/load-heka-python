@@ -4,6 +4,10 @@ sys.path.append(r"C:\fMRIData\git-repo\load-heka-python")
 
 from .runners import heka_reader_tester
 import pytest
+from load_heka_python.load_heka import LoadHeka
+import numpy as np
+from pathlib import Path
+from scipy.signal import find_peaks
 
 
 class TestFiles:
@@ -238,42 +242,69 @@ class TestFiles:
         heka_reader_tester(base_path, version, group_num_series_num_to_test, dp_thr=1e-04, include_stim_protocol=False)
 
     def test_1_4_1_with_leak(self, base_path):
-        """"""
+        """
+        Will load the third leak channel and check it matches the HEKA
+        exported file. Note the Im data is already be leak subtracted.
+        """
         version = "f14_1.4.1[Build 1036]leak"
         group_num_series_num_to_test = [["1", "1"], ["2", "2"], ["4", "3"]]
         heka_reader_tester(
-            base_path, version, group_num_series_num_to_test, dp_thr=1e-04, include_stim_protocol=False, has_leak=True
-        )
-
-    def test_f15_zero_offset_on(self, base_path):
-        version = "f15_offset_on"
-        group_num_series_num_to_test = [["1", "6"]]
-        heka_reader_tester(
             base_path,
             version,
             group_num_series_num_to_test,
             dp_thr=1e-04,
-            include_stim_protocol=True,
+            include_stim_protocol=False,
             add_zero_offset=True,
+            has_leak=True,
         )
 
-    def test_f15_zero_offset_off(self, base_path):
-        version = "f15_offset_off"
-        group_num_series_num_to_test = [["1", "6"]]
+    def test_f4_offset_off(self, base_path):
+        """
+        Test f4 with offset off because it is different to other files
+        as it is float32 on disk.
+        """
+        version = "f14_offset_off"
+        group_num_series_num_to_test = [["1", "1"]]
+
         heka_reader_tester(
             base_path,
             version,
             group_num_series_num_to_test,
             dp_thr=1e-04,
-            include_stim_protocol=True,
+            include_stim_protocol=False,
             add_zero_offset=False,
+            has_leak=True,
         )
+
+    def test_f15_zero_offset(self, base_path):
+        """
+        f15 is v2x90.3. It is exported with offset on and off (below)
+        and tested against accoprdingly.
+
+        Note this test is coerced into the format of the other tests
+        so we have the files duplicated on disk. They are only small.
+        """
+        for version, add_offset in zip(["f15_offset_on", "f15_offset_off"], [True, False]):
+            group_num_series_num_to_test = [["1", "6"]]
+            heka_reader_tester(
+                base_path,
+                version,
+                group_num_series_num_to_test,
+                dp_thr=1e-04,
+                include_stim_protocol=True,
+                add_zero_offset=add_offset,
+            )
 
     def test_f15_for_all_stimulus_settings(self, base_path):
-        from load_heka_python.load_heka import LoadHeka
-        import numpy as np
-        from pathlib import Path
+        """
+        f15 has an un-encountered organisation of the stimulus. It is
+        on a second channel and is `UseScale`. At present is not clear where
+        these scaling and offset are stored as this file seems to have none
+        applied. As such it is required to be loaded under "experimental".
 
+        Again this is coerced into the previous testing structure so
+        we again duplicate the file on disk.
+        """
         version = "f15_stimulus"
 
         full_path_to_file = Path(base_path) / version / f"{version}.dat"
@@ -288,9 +319,9 @@ class TestFiles:
             stim_channel_idx=0,
         )
 
-        assert np.all(series_data["stim"]["data"] == series_data["stim"]["data"][0, 0])
-
-        import matplotlib.pyplot as plt
+        assert np.all(
+            series_data["stim"]["data"] == series_data["stim"]["data"][0, 0]
+        ), "This channel is expected to have no stimulus, just all resting."
 
         series_data = heka_file.get_series_data(
             group_idx=0,
@@ -301,9 +332,7 @@ class TestFiles:
             stim_channel_idx=1,
         )
 
-        assert series_data["stim"] is False
-
-        from scipy.signal import find_peaks
+        assert series_data["stim"] is False, "Nothing should be loaded as this requires 'experimental'."
 
         with pytest.warns() as warning:
             series_data = heka_file.get_series_data(
@@ -316,6 +345,12 @@ class TestFiles:
             )
         assert "Data already exists" in str(warning[0].message)
 
-        for rec_data in series_data["stim"]["data"]:
+        # Hard coded check on the stimulus, based on visual inspection
+        # and confirmation from researcher.
+        for idx, rec_data in enumerate(series_data["stim"]["data"]):
             peak_idx = find_peaks(rec_data)[0]
-            assert np.array_equal(peak_idx, [2004, 4014, 6024, 8034, 10044])
+            assert np.array_equal(
+                peak_idx, [2004, 4014, 6024, 8034, 10044]
+            ), "reconstructed stimulus does not match expected."
+
+        assert idx == 4, "Only 5 records expected."
