@@ -36,6 +36,7 @@ def _import_trees(header):
         "v2x91, 23-Feb-2021",
         "v2x91, 06-Jul-2020",
         "v2x92, 23-February-2023",
+        "v2x92, 1-June-2023",
     ]:
         from .trees import Trees_v1000 as Trees
     else:
