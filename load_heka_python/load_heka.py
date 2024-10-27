@@ -374,14 +374,14 @@ class LoadHeka:
 
         return endian, levels, sizes
 
-    def get_stimulus_for_series(self, group_idx, series_idx, stim_channel_idx, experimental_mode):
+    def get_stimulus_for_series(self, group_idx, series_idx, experimental_mode, stim_channel_idx):
 
         if self.version in OLD_VERSIONS:
             warnings.warn("Stimulus reconstruction for versions before 2x90 is not supported")
             return False
 
         series_stim = stim_reader.get_stimulus_for_series(
-            self.pul, self.pgf, group_idx, series_idx, stim_channel_idx, experimental_mode
+            self.pul, self.pgf, group_idx, series_idx, experimental_mode, stim_channel_idx
         )
         return series_stim
 
@@ -468,14 +468,14 @@ class LoadHeka:
         num_rows = len(series["ch"])
         max_num_samples = self._get_max_num_samples_from_sweeps_in_series(series["ch"])
 
-        if np.any(series["ch"][0]["ch"][0]["data"]):
-            warnings.warn("Data already exists for the group, series index. Overwriting...")
-
         data_reader.fill_pul_with_data(self.pul, self.fh, group_idx, series_idx, add_zero_offset)
 
         if include_stim_protocol:
             out["stim"] = self.get_stimulus_for_series(
-                group_idx, series_idx, stim_channel_idx, experimental_mode=include_stim_protocol == "experimental"
+                group_idx,
+                series_idx,
+                experimental_mode=include_stim_protocol == "experimental",
+                stim_channel_idx=stim_channel_idx,
             )
 
         for key in ["data", "time"]:

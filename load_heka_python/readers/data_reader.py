@@ -1,6 +1,7 @@
 import copy
 import numpy as np
 import struct
+import warnings
 
 
 def fill_pul_with_data(pul, fh, group_idx, series_idx, add_zero_offset):
@@ -11,8 +12,15 @@ def fill_pul_with_data(pul, fh, group_idx, series_idx, add_zero_offset):
     """
     series = pul["ch"][group_idx]["ch"][series_idx]
 
+    if np.any(series["ch"][0]["ch"][0]["data"]):
+        warnings.warn("Data already exists for the passed group, series index. Overwriting...")
+
     for sweep in series["ch"]:
         for rec in sweep["ch"]:
+
+            # Just make sure whatever happens, any existing
+            # data is cleared to avoid confusion.
+            rec["data"] = None
 
             start = rec["hd"]["TrData"]
             length = rec["hd"]["TrDataPoints"]
@@ -53,7 +61,7 @@ def fill_pul_with_data(pul, fh, group_idx, series_idx, add_zero_offset):
                     data -= rec["hd"]["TrZeroData"]
 
             elif np_dtype == np.float32:
-                raise NotImplemented(
+                raise NotImplementedError(
                     "The zero scaling on float32 data must be checked. Please contact "
                     "Easy Electrophysiology. To revert to previous behaviour, downgrade "
                     "to v1.0.0"
@@ -61,7 +69,7 @@ def fill_pul_with_data(pul, fh, group_idx, series_idx, add_zero_offset):
                 data = data.astype(np.float64)
 
             elif np_dtype == np.float64:
-                raise NotImplemented(
+                raise NotImplementedError(
                     "The zero scaling on float64 data must be checked. Please contact "
                     "Easy Electrophysiology. To revert to previous behaviour, downgrade "
                     "to v1.0.0"

@@ -9,7 +9,7 @@ warnings.simplefilter("always", UserWarning)
 # ----------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-def get_stimulus_for_series(pul, pgf, group_idx, series_idx, stim_channel_idx, experimental_mode):
+def get_stimulus_for_series(pul, pgf, group_idx, series_idx, experimental_mode, stim_channel_idx):
     """
     Reconstruct the stimulus from the stimulus protocol stored in StimTree.
 
@@ -57,6 +57,11 @@ def get_dac_and_important_params(stim_sweep, stim_channel_idx):
 
     stim_sweep : "hd" and "ch" for stimulus protocols
 
+    stim_channel_idx : If `None`, search through the stimulus channels
+        for the first entry with a nonzero seVoltage. If all have seVoltage of zero,
+        the first channel is arbitrarily chosen. Otherwise, an integer index
+        specifying the channel to reconstruct the signal from.
+
     For each channel, we have chan["hd"] or chan["ch"] containing
     information on each 'segment' of the stimulus. The stimulus division
     into segments splits the stimulus by pulse information. So, if we have for
@@ -88,11 +93,11 @@ def get_dac_and_important_params(stim_sweep, stim_channel_idx):
     }
 
     if info["units"] == "mV":
-        # weird heka feature where stim is as mV but stored in A, I think mV might just be how it is displayed in patchmaster
+        # weird HEKA feature where stim is as mV but stored in A,
+        # I think mV might just be how it is displayed in Patchmaster.
         warnings.warn(
-            "Stimulus units are specified {0} but (almost certainly) stored as V). Please check. Updating to V.".format(
-                info["units"]
-            )
+            "Stimulus units are specified {0} but (almost certainly) stored as V). "
+            "Please check. Updating to V.".format(info["units"])
         )  # e.g. 1 instance of units mV but the data was still stored as V...
         info["units"] = "V"
 

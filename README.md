@@ -42,8 +42,10 @@ This will ensure the file is closed automatically once the block has finished.
 
 The `heka_file` object initially contains only header information. With calls
 to `get_series_data()` data will be filled internally on the object, as well
-as being returned from the function. Later calls to `get_series_data()`
-will overwrite previous data internally within the object.
+as being returned from the function. Under the good, calls to `get_series_data()`
+will overwrite previous data internally within the object with the currently
+selected settings. It is recommended to always use `get_series_data` to
+retrieve data.
 
 #### File Structure
 
