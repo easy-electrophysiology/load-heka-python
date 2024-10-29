@@ -464,6 +464,7 @@ class LoadHeka:
             "units": [],
             "stim": None,
             "sampling_step": [],
+            "zero_offsets": [],
             "dtype": "float64",  # note this is after processing (not the original stored data)
         }
 
@@ -512,6 +513,8 @@ class LoadHeka:
             t_stop = t_start + (num_samples * ts)
             out["t_stops"].append(t_stop)
 
+            out["zero_offsets"].append(sweep["ch"][channel_idx]["hd"]["TrZeroData"])
+
             out["time"][sweep_idx, :] = np.arange(max_num_samples) * ts + t_start
 
             out["data"][sweep_idx, 0:num_samples] = sweep["ch"][channel_idx]["data"]
@@ -521,7 +524,13 @@ class LoadHeka:
                 out["data"][sweep_idx, num_samples:] = fill
 
         for key in out.keys():
-            if isinstance(out[key], list) and key not in ["t_starts", "t_stops", "num_samples", "data_kinds"]:
+            if isinstance(out[key], list) and key not in [
+                "t_starts",
+                "t_stops",
+                "num_samples",
+                "data_kinds",
+                "zero_offsets",
+            ]:
                 assert self.all_equal(out[key]), (
                     "Key parameters that differ " "across sweeps are not currently supported."
                 )
