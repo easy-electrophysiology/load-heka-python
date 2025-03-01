@@ -354,3 +354,22 @@ class TestFiles:
             ), "reconstructed stimulus does not match expected."
 
         assert idx == 4, "Only 5 records expected."
+
+    def test_f16_stimulus_error(self, base_path):
+        """
+        This file simply should not error out, now that the issue
+        in which HEKA header says stimulus trace is 10k sweeps is handled.
+        """
+        version = "f16_stimulus_bug"
+
+        full_path_to_file = Path(base_path) / version / f"{version}.dat"
+
+        heka_file = LoadHeka(full_path_to_file)
+
+        heka_file.get_series_data(
+            group_idx=0,
+            series_idx=0,
+            channel_idx=0,
+            include_stim_protocol=True,
+            stim_channel_idx=0,
+        )
