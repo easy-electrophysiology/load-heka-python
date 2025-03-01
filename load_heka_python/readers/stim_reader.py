@@ -18,14 +18,14 @@ def get_stimulus_for_series(pul, pgf, group_idx, series_idx, experimental_mode, 
     """
     stim_sweep, pul_sweep, num_sweeps_in_recorded_data = get_sweep_info(pul, pgf, group_idx, series_idx)
 
-    dac, info = get_dac_and_important_params(stim_sweep, stim_channel_idx)
+    dac, info = get_dac_and_important_params(stim_sweep, stim_channel_idx, num_sweeps_in_recorded_data)
 
     if not check_header(dac, experimental_mode):
         return False
 
     segments = read_segments_into_classes(dac, info)
 
-    data = create_stimulus_waveform_from_segments(segments, info, num_sweeps_in_recorded_data)
+    data = create_stimulus_waveform_from_segments(segments, info)
 
     if not check_data(data, pul_sweep, num_sweeps_in_recorded_data):
         return False
@@ -50,7 +50,7 @@ def get_sweep_info(pul, pgf, group_idx, series_idx):
     return stim_sweep, pul_sweep, num_sweeps_in_recorded_data
 
 
-def get_dac_and_important_params(stim_sweep, stim_channel_idx):
+def get_dac_and_important_params(stim_sweep, stim_channel_idx, num_sweeps_in_recorded_data):
     """
     Guessing from the (as far as known, undocumented) stimulus structure
     organisation, we have:
@@ -91,6 +91,14 @@ def get_dac_and_important_params(stim_sweep, stim_channel_idx):
         "holding": dac["hd"]["chHolding"],
         "use_relative": dac["hd"]["chStimToDacID"]["UseRelative"],
     }
+
+    if num_sweeps_in_recorded_data != info["num_sweeps"]:
+        warnings.warn(
+            "Stimulus protocol reshaped from {0} to {1} sweeps to match recorded data".format(
+                info["num_sweeps"], num_sweeps_in_recorded_data
+            )
+        )
+        info["num_sweeps"] = num_sweeps_in_recorded_data
 
     if info["units"] == "mV":
         # weird HEKA feature where stim is as mV but stored in A,
@@ -160,7 +168,7 @@ def read_segments_into_classes(dac, info):
     return segments
 
 
-def create_stimulus_waveform_from_segments(segments, info, num_sweeps_in_recorded_data):
+def create_stimulus_waveform_from_segments(segments, info):
     """
     TODO: needs refactoring, see StimSegment()
     """
@@ -182,14 +190,6 @@ def create_stimulus_waveform_from_segments(segments, info, num_sweeps_in_recorde
     # data is stored as V and uA - ensure is V and A (TODO: own function)
     if info["units"] == "A":
         data /= 1000000000
-
-    if num_sweeps_in_recorded_data < data.shape[0]:
-        warnings.warn(
-            "Stimulus protocol reshaped from {0} to {1} sweeps to match recorded data".format(
-                data.shape[0], num_sweeps_in_recorded_data
-            )
-        )
-        data = data[:num_sweeps_in_recorded_data, :]
 
     return data
 
