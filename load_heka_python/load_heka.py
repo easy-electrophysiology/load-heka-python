@@ -36,6 +36,7 @@ def _import_trees(header):
         "v2x91, 23-Feb-2021",
         "v2x91, 06-Jul-2020",
         "v2x92, 23-February-2023",
+        "v2x92, 1-June-2023",
     ]:
         from .trees import Trees_v1000 as Trees
     else:
@@ -61,7 +62,7 @@ class LoadHeka:
           contact HEKA and get their structure information.
     """
 
-    def __init__(self, full_filepath, only_load_header=False):
+    def __init__(self, full_filepath):
 
         self.Trees = None  # filled with import once version is known
         self.full_filepath = full_filepath
@@ -84,9 +85,6 @@ class LoadHeka:
             self.sol = self._get_sol()
             self.mrk = self._get_mrk()
             self.onl = self._get_onl()
-
-        if not only_load_header:
-            self._fill_pul_recs_with_data()
 
     def _get_header(self):
         """ """
@@ -193,10 +191,6 @@ class LoadHeka:
                 return item["oStart"], item["oLength"]
 
         return False, False
-
-    def _fill_pul_recs_with_data(self):
-        data_reader.check_sweep_params_are_equal_for_every_series_in_file(self.pul)
-        self._fill_entire_file_pul_with_data()
 
     def __enter__(self):
         """
@@ -380,25 +374,15 @@ class LoadHeka:
 
         return endian, levels, sizes
 
-    def _fill_entire_file_pul_with_data(self):
-        """
-        The pulse tree is essentially a tree of header information that contains no data. The data is read from the start
-        of the file based on pointers contained in the pulse tree.
-
-        For convenience, when the data is read from the file it is stored in the corresponding pulse tree record. Public functions (see below)
-        are used to extract this in more conveient formats.
-        """
-        for group_idx, group in enumerate(self.pul["ch"]):
-            for series_idx, __ in enumerate(group["ch"]):
-                data_reader.fill_pul_with_data(self.pul, self.fh, group_idx, series_idx)
-
-    def get_stimulus_for_series(self, group_idx, series_idx):
+    def get_stimulus_for_series(self, group_idx, series_idx, experimental_mode, stim_channel_idx):
 
         if self.version in OLD_VERSIONS:
             warnings.warn("Stimulus reconstruction for versions before 2x90 is not supported")
             return False
 
-        series_stim = stim_reader.get_stimulus_for_series(self.pul, self.pgf, group_idx, series_idx)
+        series_stim = stim_reader.get_stimulus_for_series(
+            self.pul, self.pgf, group_idx, series_idx, experimental_mode, stim_channel_idx
+        )
         return series_stim
 
     @staticmethod
@@ -414,7 +398,16 @@ class LoadHeka:
     # Public_functions
     # ----------------------------------------------------------------------------------------------------------------------------------------------------
 
-    def get_series_data(self, group_idx, series_idx, channel_idx, include_stim_protocol=False, fill_with_mean=False):
+    def get_series_data(
+        self,
+        group_idx,
+        series_idx,
+        channel_idx,
+        include_stim_protocol=False,
+        fill_with_mean=False,
+        add_zero_offset=True,
+        stim_channel_idx=None,
+    ):
         """
         Convenience function to extract Im or Vm channel data from a series. If the data has not already been loaded into memory,
         it will be loaded into the pulse tree prior to beign returned in a more convenient form with this method. Output is in
@@ -433,15 +426,20 @@ class LoadHeka:
 
             channel_idx - the index of the channel to return data from.
 
-            include_stim_protocol - also return the series stimulation protocol generated from the StimTree.
+            include_stim_protocol - If `True`, also return the series stimulation protocol generated from the StimTree. If "experimental",
+                                    reconstruct stimuli patterns based on assumptions on how HEKA's metadata organisation and may miss scaling
+                                    factors. Check the reconstructed stimuli carefully. https://www.warneronline.com/sites/default/files/2018-08/Chartmaster_Manual.pdf
 
             fill_with_mean - by default, if sweep data is smaller than others in the series, it will be padded with NaN. This option
                              will override this and set as the mean of the trace.
 
+            add_zero_offset - if `True`, offset is added to scale the resting potential to zero.
+
+            stim_channel_index - if `None`, the first stimulus channel with a non-zero seVoltage field will be used. Otherwise,
+                                 this can be manually specified with an integer index.
+
         OUTPUTS:
-            dictionary of parameters (see out below). For each sweep, the parameter value is appended to a list. This is somewhat redundant
-            as many of these parameters are checked that they are equal in check_sweep_params_are_equal_for_every_series_in_file(). However
-            while verbose this is kept for now as the HEKA filetype is very dynamic, and better to be clearer in case of unexpected edge cases.
+            dictionary of parameters (see out below). For each sweep, the parameter value is appended to a list.
 
             As well as relevant parameters for the record, the "data" field contains a sweep x num samples numpy array of all sweeps from the series. If
             a sweep has less samples in it than the others, the end of the row will be padded with Nan (unless fill_with_mean is set, in which
@@ -466,17 +464,22 @@ class LoadHeka:
             "units": [],
             "stim": None,
             "sampling_step": [],
+            "zero_offsets": [],
             "dtype": "float64",  # note this is after processing (not the original stored data)
         }
 
         num_rows = len(series["ch"])
         max_num_samples = self._get_max_num_samples_from_sweeps_in_series(series["ch"])
 
-        if not np.any(series["ch"][0]["ch"][0]["data"]):
-            data_reader.fill_pul_with_data(self.pul, self.fh, group_idx, series_idx)
+        data_reader.fill_pul_with_data(self.pul, self.fh, group_idx, series_idx, add_zero_offset)
 
         if include_stim_protocol:
-            out["stim"] = self.get_stimulus_for_series(group_idx, series_idx)
+            out["stim"] = self.get_stimulus_for_series(
+                group_idx,
+                series_idx,
+                experimental_mode=include_stim_protocol == "experimental",
+                stim_channel_idx=stim_channel_idx,
+            )
 
         for key in ["data", "time"]:
             out[key] = np.full([num_rows, max_num_samples], np.nan)
@@ -510,6 +513,8 @@ class LoadHeka:
             t_stop = t_start + (num_samples * ts)
             out["t_stops"].append(t_stop)
 
+            out["zero_offsets"].append(sweep["ch"][channel_idx]["hd"]["TrZeroData"])
+
             out["time"][sweep_idx, :] = np.arange(max_num_samples) * ts + t_start
 
             out["data"][sweep_idx, 0:num_samples] = sweep["ch"][channel_idx]["data"]
@@ -519,7 +524,13 @@ class LoadHeka:
                 out["data"][sweep_idx, num_samples:] = fill
 
         for key in out.keys():
-            if isinstance(out[key], list) and key not in ["t_starts", "t_stops", "num_samples", "data_kinds"]:
+            if isinstance(out[key], list) and key not in [
+                "t_starts",
+                "t_stops",
+                "num_samples",
+                "data_kinds",
+                "zero_offsets",
+            ]:
                 assert self.all_equal(out[key]), (
                     "Key parameters that differ " "across sweeps are not currently supported."
                 )

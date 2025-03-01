@@ -1,9 +1,10 @@
 import copy
 import numpy as np
 import struct
+import warnings
 
 
-def fill_pul_with_data(pul, fh, group_idx, series_idx):
+def fill_pul_with_data(pul, fh, group_idx, series_idx, add_zero_offset):
     """
     Fill the ["data"] field of all pulse tree records for the specified group and series with raw data from file.
 
@@ -11,8 +12,15 @@ def fill_pul_with_data(pul, fh, group_idx, series_idx):
     """
     series = pul["ch"][group_idx]["ch"][series_idx]
 
+    if np.any(series["ch"][0]["ch"][0]["data"]):
+        warnings.warn("Data already exists for the passed group, series index. Overwriting...")
+
     for sweep in series["ch"]:
         for rec in sweep["ch"]:
+
+            # Just make sure whatever happens, any existing
+            # data is cleared to avoid confusion.
+            rec["data"] = None
 
             start = rec["hd"]["TrData"]
             length = rec["hd"]["TrDataPoints"]
@@ -46,10 +54,14 @@ def fill_pul_with_data(pul, fh, group_idx, series_idx):
             # Scale and recast to float64
             if np_dtype in [np.int16, np.int32]:
                 scaling_factor = np.array(rec["hd"]["TrDataScaler"], dtype=np.float64)
-                data = (data * scaling_factor) - rec["hd"]["TrZeroData"]
+
+                data = data * scaling_factor
 
             elif np_dtype == np.float32:
                 data = data.astype(np.float64)
+
+            if add_zero_offset:
+                data -= rec["hd"]["TrZeroData"]
 
             rec["data"] = data
 
@@ -91,7 +103,7 @@ def get_dataformat(idx):
 # ----------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-def get_channel_parameters_across_all_series(pul, group_idx):  # DOC THIS
+def get_channel_parameters_across_all_series(pul, group_idx):
 
     num_series = len(pul["ch"][group_idx]["ch"])
 

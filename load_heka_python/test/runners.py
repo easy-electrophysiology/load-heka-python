@@ -5,7 +5,15 @@ from os.path import join
 
 
 def heka_reader_tester(
-    base_path, version, group_series_to_test, dp_thr=1e-6, assert_time=True, include_stim_protocol=True, has_leak=False
+    base_path,
+    version,
+    group_series_to_test,
+    dp_thr=1e-6,
+    assert_time=True,
+    include_stim_protocol=True,
+    has_leak=False,
+    add_zero_offset=True,
+    stim_channel_idx=0,
 ):
     """
     Test the data read my LoadHeka matches the data when loading into Patchmaster. Data must be exported from Patchmaster
@@ -38,7 +46,7 @@ def heka_reader_tester(
         + "----------------------------------------------------------------------------------------------------------------\n"
     )
 
-    heka_file = LoadHeka(join(base_path, version, version + ".dat"), only_load_header=True)
+    heka_file = LoadHeka(join(base_path, version, version + ".dat"))
 
     for group_num, series_num in group_series_to_test:
         print(f"group: {group_num} series: {series_num}")
@@ -57,6 +65,8 @@ def heka_reader_tester(
                 channel_idx,
                 include_stim_protocol=include_stim_protocol,
                 fill_with_mean=True,
+                add_zero_offset=add_zero_offset,
+                stim_channel_idx=stim_channel_idx,
             )
 
             if load_heka["data_kinds"][0]["IsLeak"]:

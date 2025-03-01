@@ -1,12 +1,6 @@
 # Heka Loader for Python
 
-1) Introduction and Acknowledgements
-2) Usage Instructions
-3) Lazy Loading
-4) Supported File Versions and Recording Settings
-5) Testing your files
-
-## 1) Introduction and Acknowledgements
+## Introduction and Acknowledgements
 
 This module will load HEKA files created by PatchMaster software into Python. Note this module
 is still in the testing phase, please see section 4 and 5 for details.
@@ -18,11 +12,6 @@ Inspiration has also been taken from Christian Keine / Sammy Katta's [MATLAB HEK
 We would also like to acknowledge [Stimfits HEKA module](https://github.com/neurodroid/stimfit) and [SigTools module](https://pubmed.ncbi.nlm.nih.gov/19056423/)
 on which the above examples were based, and HEKA for their detailed documentation on the filetype, available the network drive: server.hekahome.de
 
-## 2) Usage Instructions
-
-By default, the HEKA loader will load the entire file (i.e. header information + data) into memory.
-The argument only_load_header=True can be used for lazy loading (i.e. only loading the header into memory,
-before specifying which series data to load, see section 3).
 
 ### Getting Started
 
@@ -36,7 +25,7 @@ from load_heka_python.load_heka import LoadHeka
 
 full_path_to_file = r"C:\path\to\a\file.dat"
 
-heka_file = LoadHeka(full_path_to_file)
+heka_file = LoadHeka(full_path_to_file)  # only loads header information
 series_data = heka_file.get_series_data(group_idx=0, series_idx=0, channel_idx=0)
 heka_file.close()
 ```
@@ -50,6 +39,13 @@ with LoadHeka(full_path_to_file) as heka_file:
 	series_data = heka_file.get_series_data(group_idx=0, series_idx=0, channel_idx=0)
 ```
 This will ensure the file is closed automatically once the block has finished.
+
+The `heka_file` object initially contains only header information. With calls
+to `get_series_data()` data will be filled internally on the object, as well
+as being returned from the function. Under the good, calls to `get_series_data()`
+will overwrite previous data internally within the object with the currently
+selected settings. It is recommended to always use `get_series_data` to
+retrieve data.
 
 #### File Structure
 
@@ -95,7 +91,15 @@ Public Functions:
 ```
 heka_file.print_group_names()
 heka_file.print_series_names(group_idx)
-heka_file.get_series_data(group_idx=group_idx, series_idx=0, channel_idx=0, include_stim_protocol=bool)
+
+heka_file.get_series_data(
+    group_idx=group_idx,
+    series_idx=0,
+    channel_idx=0,
+    include_stim_protocol=True
+    add_zero_offset=True,
+    stim_channel_idx=None,
+)
 ```
 First, to get the indexes of the group and series you want to load, you can use:
 ```
@@ -126,24 +130,12 @@ This will return the dictionary data with series:
 
 as well as number of fields `("labels", "ts", "data_kinds", "num_samples", "t_starts", "t_stops")` containing information for each sweep.
 
-
 In theory, these are the only methods you will need to use, however the class has many private methods that might be useful (see source code).
 
-
-## 3) Lazy Loading
-
-By default, the entire file is loaded into memory (i.e. the `["data"]` field of the pulse records
-are all filled).
-
-However, as HEKA files can be very large (e.g. ~200 MB) options are provided
-for 'lazy' loading. This will only load the header information and no data. To load the data, the function `get_series_data()` is used.
-
-If the series is loaded with `get_series_data()`, then this selected series only
-will be loaded into memory (i.e. the `["data"]` fields on the pulse tree, on the selected records only, will be filled)
-before the data is returned.
+See the function docstring full details on the function arguments.
 
 
-## 4) Supported File Versions and Recording Settings
+## Supported File Versions and Recording Settings
 
 HEKA has been in business for over 40 years and as such has many file versions. Furthermore,
 it is a highly flexible filetype with many many options and parameter combinations.
@@ -154,14 +146,16 @@ button and comparing the output of LoadHeka to this (see test_load_heka). As mor
 these will be added to the test suite and supported.
 
 When using this module for the first time, please check that your data appears as it does in the PatchMaster file.
-Also, please send your files to support@easyelectrophysiology.com so they can be added to our test suite. Please open an Issue in case of any problems.
+Also, please send your files to support@easyelectrophysiology.com so they can be added to our test suite.
+Please open an Issue in case of any problems.
 
 Known settings currently not tested / supported:
 - big endian encoding
 - data stored as int32 and float64
 - virtual data
 - units not in s, A, V
-- currently only Constant (positive), Ramp (positive) and Continuous stimulus protocol reconstruction is supported
+- currently only Constant (positive), Ramp (positive) and Continuous stimulus protocol reconstruction is supported.
+  Other modes may be exposed in the `include_stim_protocol="experimental"` mode.
 
 However, there may be other setting combinations that have not been anticipated. So far, all tested files match the HEKA
 data output well (see `./test/test_load_heka.py` for details). Again, please send your files to support@easyelectrophysiology.com so they can be added
@@ -186,7 +180,7 @@ v1000
         v2x92
 	v1.2
 ```
-## 5) Testing Your Files
+## Testing Your Files
 
 Options are provided to test the data read by LoadHeka against the data as displayed in Patchmaster. This is recommended during the ongoing testing phase.
 
