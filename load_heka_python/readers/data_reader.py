@@ -87,7 +87,7 @@ def get_dataformat(idx):
         return "h", 2, np.int16, "int16"
 
     elif idx == 1:
-        raise BaseException("int32 datatype not tested ")
+        # raise BaseException("int32 datatype not tested ")
         return "i", 4, np.int32, "int32"
 
     elif idx == 2:

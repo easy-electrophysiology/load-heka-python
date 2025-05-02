@@ -115,7 +115,9 @@ def get_dac_and_important_params(stim_sweep, stim_channel_idx, num_sweeps_in_rec
 def check_header(dac, experimental_mode):
 
     if not dac["hd"]["chStimToDacID"]["UseStimScale"] and not experimental_mode:
-        warnings.warn("Only StimScale supported, stimulus protocol not reconstructed")
+        warnings.warn(
+            "Only StimScale supported, stimulus protocol not reconstructed. Turn off stimulus reconstruction to load file."
+        )
         return False
 
     untested_metadata_keywords = [
