@@ -34,6 +34,7 @@ def _import_trees(header):
         "1.2.0 [Build 1469]",
         "1.3.0 [Build 1008]",
         "1.4.1 [Build 1036]",
+        "1.5.0 [Build 1061]",
         "v2x91, 23-Feb-2021",
         "v2x91, 06-Jul-2020",
         "v2x92, 23-February-2023",
