@@ -3,10 +3,12 @@ import numpy as np
 import struct
 from .trees.SharedTrees import (
     BundleHeader,
+    BundleHeaderV2000,
     MarkerRootRecord,
     MarkerRecord,
     get_stim_to_dac_id,
     get_data_kind,
+    cstr,
 )
 from .readers import stim_reader
 from .readers import data_reader
@@ -15,6 +17,11 @@ import warnings
 warnings.simplefilter("always", UserWarning)
 
 OLD_VERSIONS = ["v2x65, 19-Dec-2011"]
+
+# PatchMaster Next versions using the v2000 (64-bit offset) file format
+V2000_VERSIONS = [
+    "1.6.0 [Build 1066]",
+]
 
 
 def _import_trees(header):
@@ -41,6 +48,9 @@ def _import_trees(header):
         "v2x92, 1-June-2023",
     ]:
         from .trees import Trees_v1000 as Trees
+
+    elif header["oVersion"] in V2000_VERSIONS:
+        from .trees import Trees_v2000 as Trees
     else:
         raise BaseException("Version not current supported, please contact support@easyelectrophysiology.com")
 
@@ -89,16 +99,32 @@ class LoadHeka:
             self.onl = self._get_onl()
 
     def _get_header(self):
-        """ """
+        """
+        The bundle header layout changed at v2000 (352 bytes, 64-bit BundleItem offsets)
+        vs v1000 (256 bytes, 32-bit offsets). The text version string lives at the same
+        offset in both layouts, so peek it first to select the correct header record.
+        """
+        header_record = BundleHeaderV2000() if self._peek_version() in V2000_VERSIONS else BundleHeader()
+
         self.fh.seek(0)
-        header = self._unpack_header(BundleHeader())
+        header = self._unpack_header(header_record)
 
         if not header["oIsLittleEndian"]:
             raise BaseException("Big endian on the header not tested ")
             self.fh.seek(0)
-            header = self._unpack_header(BundleHeader(), ">")
+            header = self._unpack_header(header_record, ">")
 
         return header
+
+    def _peek_version(self):
+        """
+        Read the text version string (oVersion, offset 8, 32 chars) without consuming
+        the header. This field is identical across the v1000 and v2000 header layouts.
+        """
+        self.fh.seek(8)
+        version = cstr(struct.unpack("<32s", self.fh.read(32))[0])
+        self.fh.seek(0)
+        return version
 
     def _get_pgf(self):
         """ """
