@@ -1,0 +1,241 @@
+
+                                          PatchMaster Next v1.6.0, 28-Oct-2025
+
+   SizeByte             = 1;
+   SizeChar             = 1;
+   SizeEnum             = 1;
+   SizeBoolean          = 1;
+   SizeInt16            = 2;
+   SizeCard16           = 2;
+   SizeSet16            = 2;
+   SizeInt32            = 4;
+   SizeCard32           = 4;
+   SizeInt64            = 8;
+   SizeReal             = 4;
+   SizeLongReal         = 8;
+
+   String8Size          = 8;
+   String32Size         = 32;
+   String80Size         = 80;
+   String400Size        = 400;
+
+   ParamDescrSize       = 24;
+   TrMarkerNo           = 10;
+   SwMarkerNo           = 4;
+   SwHoldingNo          = 16;
+   SwUserParamNo        = 4;
+   SeUserParamNo1       = 4;
+   SeUserParamNo2       = 4;
+   GrStimParams         = 10;
+   AmplifierStateSize   = 400;
+   ScanParamsSize       = 96;
+   Max_TcKind_M1        = 31;
+
+   SizeStateVersion     = 8;
+   SizeSerialNumber     = 8;
+   SizeCalibDate        = 16;
+
+
+   RootLevel            = 0;
+   GroupLevel           = 1;
+   SeriesLevel          = 2;
+   SweepLevel           = 3;
+   TraceLevel           = 4;
+
+
+   LittleEndianBit      = 0;
+   IsLeak               = 1;
+   IsVirtual            = 2;
+   IsImon               = 3;
+   IsVmon               = 4;
+   Clip                 = 5;
+   (*
+      DataKind          -> meaning of bits:
+                           - LittleEndianBit => byte sequence
+                             "PowerPC Mac" = cleared
+                             "Windows and Intel Mac" = set
+                           - IsLeak
+                             set if trace is a leak trace
+                           - IsVirtual
+                             set if trace is a virtual trace
+                           - IsImon
+                             -> set if trace was from Imon ADC
+                             -> it flags a trace to be used to
+                                compute LockIn traces from
+                             -> limited to "main" traces, not "leaks"!
+                           - IsVmon
+                             -> set if trace was from Vmon ADC
+                           - Clip
+                             -> set if amplifier of trace was clipping
+    *)
+
+   RecordingModeType    = ( InOut,
+                            OnCell,
+                            OutOut,
+                            WholeCell,
+                            CClamp,
+                            VClamp,
+                            NoMode );
+
+   DataFormatType       = ( int16,
+                            int32,
+                            real32,
+                            real64 );
+
+   UserParamDescrType   = RECORD
+      Name              : String32Type;
+      Unit              : String8Type;
+   END; (* RECORD *)
+
+   (* AmplifierState    = RECORD *)
+   see definition in AmplTreeFile_v1000.txt
+
+   (* LockInParams      = RECORD *)
+   see definition in AmplTreeFile_v1000.txt
+
+   (* TraceRecord       = RECORD *)
+   TrMark               =   0; (* INT32 *)
+   TrLabel              =   4; (* String32Type *)
+   TrTraceID            =  36; (* INT32 *)
+   TrData               =  40; (* INT64 *)
+   TrDataPoints         =  48; (* INT64 *)
+   TrInternalSolution   =  56; (* INT32 *)
+   TrAverageCount       =  60; (* INT32 *)
+   TrLeakID             =  64; (* INT32 *)
+   TrLeakTraces         =  68; (* INT32 *)
+   TrDataKind           =  72; (* SET16 *)
+   TrUseXStart          =  74; (* BOOLEAN *)
+   TrTcKind             =  75; (* BYTE *)
+   TrRecordingMode      =  76; (* BYTE *)
+   TrAmplIndex          =  77; (* CHAR *)
+   TrDataFormat         =  78; (* BYTE *)
+   TrDataAbscissa       =  79; (* BYTE *)
+   TrDataScaler         =  80; (* LONGREAL *)
+   TrTimeOffset         =  88; (* LONGREAL *)
+   TrZeroData           =  96; (* LONGREAL *)
+   TrYUnit              = 104; (* String8Type *)
+   TrXInterval          = 112; (* LONGREAL *)
+   TrXStart             = 120; (* LONGREAL *)
+   TrXUnit              = 128; (* String8Type *)
+   TrYRange             = 136; (* LONGREAL *)
+   TrYOffset            = 144; (* LONGREAL *)
+   TrBandwidth          = 152; (* LONGREAL *)
+   TrPipetteResistance  = 160; (* LONGREAL *)
+   TrCellPotential      = 168; (* LONGREAL *)
+   TrSealResistance     = 176; (* LONGREAL *)
+   TrCSlow              = 184; (* LONGREAL *)
+   TrGSeries            = 192; (* LONGREAL *)
+   TrRsValue            = 200; (* LONGREAL *)
+   TrGLeak              = 208; (* LONGREAL *)
+   TrMConductance       = 216; (* LONGREAL *)
+   TrLinkDAChannel      = 224; (* INT32 *)
+   TrValidYrange        = 228; (* BOOLEAN *)
+   TrAdcMode            = 229; (* CHAR *)
+   TrAdcChannel         = 230; (* INT16 *)
+   TrYmin               = 232; (* LONGREAL *)
+   TrYmax               = 240; (* LONGREAL *)
+   TrSourceChannel      = 248; (* INT32 *)
+   TrExternalSolution   = 252; (* INT32 *)
+   TrCM                 = 256; (* LONGREAL *)
+   TrGM                 = 264; (* LONGREAL *)
+   TrPhase              = 272; (* LONGREAL *)
+   TrDataCRC            = 280; (* CARD32 *)
+   TrCRC                = 284; (* CARD32 *)
+   TrGS                 = 288; (* LONGREAL *)
+   TrSelfChannel        = 296; (* INT32 *)
+   TrInterleaveSize     = 300; (* INT64 *)
+   TrInterleaveSkip     = 308; (* INT64 *)
+   TrImageIndex         = 316; (* INT32 *)
+   TrTrMarkers          = 320; (* ARRAY[0..9] OF LONGREAL *)
+   TrSECM_X             = 400; (* LONGREAL *)
+   TrSECM_Y             = 408; (* LONGREAL *)
+   TrSECM_Z             = 416; (* LONGREAL *)
+   TrTrHolding          = 424; (* LONGREAL *)
+   TrTcEnumerator       = 432; (* INT32 *)
+   TrXTrace             = 436; (* INT32 *)
+   TrIntSolValue        = 440; (* LONGREAL *)
+   TrExtSolValue        = 448; (* LONGREAL *)
+   TrIntSolName         = 456; (* String32Size *)
+   TrExtSolName         = 488; (* String32Size *)
+   TrDataPedestal       = 520; (* LONGREAL *)
+   TraceRecSize         = 528;
+
+   (* SweepRecord       = RECORD *)
+   SwMark               =   0; (* INT32 *)
+   SwLabel              =   4; (* String32Type *)
+   SwAuxDataFileOffset  =  36; (* INT32 *)
+   SwStimCount          =  40; (* INT32 *)
+   SwSweepCount         =  44; (* INT32 *)
+   SwTime               =  48; (* LONGREAL *)
+   SwTimer              =  56; (* LONGREAL *)
+   SwSwUserParams       =  64; (* ARRAY[0..1] OF LONGREAL *)
+   SwPipPressure        =  80; (* LONGREAL *)
+   SwRMSNoise           =  88; (* LONGREAL *)
+   SwTemperature        =  96; (* LONGREAL *)
+   SwOldIntSol          = 104; (* INT32 *)
+   SwOldExtSol          = 108; (* INT32 *)
+   SwDigitalIn          = 112; (* SET16 *)
+   SwSweepKind          = 114; (* SET16 *)
+   SwDigitalOut         = 116; (* SET16 *)
+      SwFiller1         = 118; (* INT16 *)
+   SwSwMarkers          = 120; (* ARRAY[0..3] OF LONGREAL, see SwMarkersNo *)
+      SwFiller2         = 152; (* INT32 *)
+   SwCRC                = 156; (* CARD32 *)
+   SwSwHolding          = 160; (* ARRAY[0..15] OF LONGREAL, see SwHoldingNo *)
+   SwSwUserParamEx      = 288; (* ARRAY[0..7] OF LONGREAL *)
+   SweepRecSize         = 352;
+
+   (* SeriesRecord      = RECORD *)
+   SeMark               =   0; (* INT32 *)
+   SeLabel              =   4; (* String32Type *)
+   SeComment            =  36; (* String80Type *)
+   SeSeriesCount        = 116; (* INT32 *)
+   SeNumberSweeps       = 120; (* INT32 *)
+   SeAmplStateFlag      = 124; (* INT32 *) // flag > 0 => load local oldAmpState, otherwise load from .amp File.
+   SeAmplStateRef       = 128; (* INT32 *) // ref  = 0 => use local oldAmpState
+   SeMethodTag          = 132; (* INT32 *)
+   SeTime               = 136; (* LONGREAL *)
+   SePageWidth          = 144; (* LONGREAL *)
+   SeUserDescr1         = 152; (* ARRAY[0..1] OF UserParamDescrType = 2*40 *)
+     SeFiller1          = 232; (* ARRAY[0..1] OF UserParamDescrType = 2*40 *)
+   SeMethodName         = 312; (* String32Type *)
+   SePhotoParams1       = 344; (* ARRAY[0..3] OF LONGREAL = 4*8 *)
+   SeOldLockInParams    = 376; (* SeOldLockInSize = 96, see "Pulsed.de" *)
+   SeOldAmpState        = 472; (* SeOldAmpState = 400 -> the AmplStateRecord is now stored in the .amp file *)
+   SeUsername           = 872; (* String80Type *)
+   SePhotoParams2       = 952; (* ARRAY[0..3] OF UserParamDescrType = 4*40 *)
+      SeFiller1         = 1112; (* INT32 *)
+   SeCRC                = 1116; (* CARD32 *)
+   SeSeUserParams2      = 1120; (* ARRAY[0..3] OF LONGREAL *)
+   SeSeUserParamDescr2  = 1152; (* ARRAY[0..3] OF UserParamDescrType = 4*40 *)
+   SeScanParams         = 1312; (* ScanParamsSize = 96 (ElProScan Extension) *)
+   SeUserDescr2         = 1408; (* ARRAY[0..7] OF UserParamDescrType = 8*40 *)   
+   SeriesRecSize        = 1728;
+
+   (* GroupRecord       = RECORD *)
+   GrMark               =   0; (* INT32 *)
+   GrLabel              =   4; (* String32Size *)
+   GrText               =  36; (* String80Size *)
+   GrExperimentNumber   = 116; (* INT32 *)
+   GrGroupCount         = 120; (* INT32 *)
+   GrCRC                = 124; (* CARD32 *)
+   GrMatrixWidth        = 128; (* LONGREAL *)
+   GrMatrixHeight       = 136; (* LONGREAL *)
+   GroupRecSize         = 144;
+
+   (* RootRecord        = RECORD *)
+   RoVersion            =   0; (* INT32 *)
+   RoMark               =   4; (* INT32 *)
+   RoVersionName        =   8; (* String32Type *)
+   RoAuxFileName        =  40; (* String80Type *)
+   RoRootText           = 120; (* String400Type *)
+   RoStartTime          = 520; (* LONGREAL *)
+   RoMaxSamples         = 528; (* INT32 *)
+   RoCRC                = 532; (* CARD32 *)
+   RoFeatures           = 536; (* SET16 *)
+      RoFiller1         = 538; (* INT16 *)
+      RoFiller2         = 540; (* INT32 *)
+   RoTcEnumerator       = 544; (* ARRAY[0..Max_TcKind_M1] OF INT16 *)
+   RoTcKind             = 608; (* ARRAY[0..Max_TcKind_M1] OF INT8 *)
+   RootRecSize          = 640;
+

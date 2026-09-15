@@ -4,6 +4,11 @@ import numpy as np
 warnings.simplefilter("always", UserWarning)
 
 
+class UnsupportedStimFeatureError(Exception):
+    """Raised when the stimulus protocol uses a feature that is not yet
+    reconstructed, so the stimulus can be disregarded rather than crashing."""
+
+
 # ----------------------------------------------------------------------------------------------------------------------------------------------------
 # Generate Stimulus
 # ----------------------------------------------------------------------------------------------------------------------------------------------------
@@ -23,7 +28,11 @@ def get_stimulus_for_series(pul, pgf, group_idx, series_idx, experimental_mode, 
     if not check_header(dac, experimental_mode):
         return False
 
-    segments = read_segments_into_classes(dac, info)
+    try:
+        segments = read_segments_into_classes(dac, info)
+    except UnsupportedStimFeatureError as err:
+        warnings.warn("{0} Stimulus will be disregarded.".format(err))
+        return False
 
     data = create_stimulus_waveform_from_segments(segments, info)
 
@@ -234,15 +243,15 @@ class StimSegment:
         self.run_checks()
 
     def get_inc_or_dec(self):
-        if self.voltage_increment_mode in ["ModeInc"]:
-            increasing_or_decreasing = "increasing"
+        if self.voltage_increment_mode == "ModeInc":
+            return "increasing"
 
-        elif self.voltage_increment_mode in ["ModeDec"]:
+        if self.voltage_increment_mode == "ModeDec":
             raise BaseException("Test Negative")
-        else:
-            raise BaseException("voltage increment mode not recognised")
 
-        return increasing_or_decreasing
+        raise UnsupportedStimFeatureError(
+            "Voltage increment mode '{0}' is not supported.".format(self.voltage_increment_mode)
+        )
 
     def sweep(self, sweep_idx):
         func = np.add if self.increasing_or_decreasing == "increasing" else np.subtract

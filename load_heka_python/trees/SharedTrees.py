@@ -245,6 +245,36 @@ class BundleHeader(Description):
         self.size = 256
 
 
+class BundleItemsV2000(Description):
+    def __init__(self, n=1):
+        super(BundleItemsV2000, self).__init__(n)
+
+        self.description = [
+            ("oStart", "q"),  # (* INT64 *)
+            ("oLength", "q"),  # (* INT64 *)
+            ("oExtension", "8s", cstr),  # (* ARRAY[0..7] OF CHAR *)
+        ]
+        self.size = 24
+
+
+class BundleHeaderV2000(Description):
+    def __init__(self, n=1):
+        super(BundleHeaderV2000, self).__init__(n)
+
+        self.description = [
+            ("oSignature", "8s", cstr),  # (* ARRAY[0..7] OF CHAR *)
+            ("oVersion", "32s", cstr),  # (* ARRAY[0..31] OF CHAR *)
+            ("oTime", "d"),  # (* LONGREAL *)
+            ("oItems", "i"),  # (* INT32 *)
+            ("oIsLittleEndian", "?"),  # (* BOOLEAN *) #
+            ("oReserved", "3s"),  # (* ARRAY[0..2] OF CHAR *)
+            ("oFormatVersion", "i"),  # (* INT32 *) numeric file-format version (== 2000)
+            ("oReserved2", "4s"),  # (* ARRAY[0..3] OF CHAR *)
+            ("oBundleItems", "288s", BundleItemsV2000(12)),  # (* ARRAY[0..11] OF BundleItem *)
+        ]
+        self.size = 352
+
+
 class AmplifierState_v9(Description):
     def __init__(self, n=1):
         super(AmplifierState_v9, self).__init__(n)

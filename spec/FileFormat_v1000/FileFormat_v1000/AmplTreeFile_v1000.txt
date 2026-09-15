@@ -1,0 +1,220 @@
+
+                                          PatchMaster v2.90.4, Patchmaster Next
+
+   SizeByte             = 1;
+   SizeChar             = 1;
+   SizeEnum             = 1;
+   SizeBoolean          = 1;
+   SizeInt16            = 2;
+   SizeCard16           = 2;
+   SizeSet16            = 2;
+   SizeInt32            = 4;
+   SizeCard32           = 4;
+   SizeReal             = 4;
+   SizeLongReal         = 8;
+
+   String8Size          = 8;
+   String32Size         = 32;
+
+
+   RootLevel            = 0;
+   SeriesLevel          = 1;
+   StateLevel           = 2;
+
+
+   AmplifierType        = ( Epc7Ampl,
+                            Epc8Ampl,
+                            Epc9Ampl,
+                            Epc10Ampl,
+                            Epc10PlusAmpl );
+
+   ADBoardType          = ( ITC16Board,
+                            ITC18Board,
+                            LIH1600Board );
+
+   Modes                = ( TestMode,
+                            VCMode,
+                            CCMode,
+                            NoMode => (* AmplifierState is invalid *) );
+
+
+   (* AmplifierState    = RECORD *)
+   sStateVersion        = 0;                 (* 8 = SizeStateVersion *)
+   sCurrentGain         = 8;                 (* LONGREAL *)
+   sF2Bandwidth         = 16;                (* LONGREAL *)
+   sF2Frequency         = 24;                (* LONGREAL *)
+   sRsValue             = 32;                (* LONGREAL *)
+   sRsFraction          = 40;                (* LONGREAL *)
+   sGLeak               = 48;                (* LONGREAL *)
+   sCFastAmp1           = 56;                (* LONGREAL *)
+   sCFastAmp2           = 64;                (* LONGREAL *)
+   sCFastTau            = 72;                (* LONGREAL *)
+   sCSlow               = 80;                (* LONGREAL *)
+   sGSeries             = 88;                (* LONGREAL *)
+   sVCStimDacScale      = 96;                (* LONGREAL *)
+   sCCStimScale         = 104;               (* LONGREAL *)
+   sVHold               = 112;               (* LONGREAL *)
+   sLastVHold           = 120;               (* LONGREAL *)
+   sVpOffset            = 128;               (* LONGREAL *)
+   sVLiquidJunction     = 136;               (* LONGREAL *)
+   sCCIHold             = 144;               (* LONGREAL *)
+   sCSlowStimVolts      = 152;               (* LONGREAL *)
+   sCCTrackVHold        = 160;               (* LONGREAL *)
+   sTimeoutCSlow        = 168;               (* LONGREAL *)
+   sSearchDelay         = 176;               (* LONGREAL *)
+   sMConductance        = 184;               (* LONGREAL *)
+   sMCapacitance        = 192;               (* LONGREAL *)
+   sSerialNumber        = 200;               (* 8 = SizeSerialNumber *)
+
+   sE9Boards            = 208;               (* INT16 *)
+   sCSlowCycles         = 210;               (* INT16 *)
+   sIMonAdc             = 212;               (* INT16 *)
+   sVMonAdc             = 214;               (* INT16 *)
+
+   sMuxAdc              = 216;               (* INT16 *)
+   sTestDac             = 218;               (* INT16 *)
+   sStimDac             = 220;               (* INT16 *)
+   sStimDacOffset       = 222;               (* INT16 *)
+
+   sMaxDigitalBit       = 224;               (* INT16 *)
+   sHasCFastHigh        = 226;               (* BYTE *)
+   sCFastHigh           = 227;               (* BYTE *)
+   sHasBathSense        = 228;               (* BYTE *)
+   sBathSense           = 229;               (* BYTE *)
+   sHasF2Bypass         = 230;               (* BYTE *)
+   sF2Mode              = 231;               (* BYTE *)
+
+   sAmplKind            = 232;               (* BYTE *)
+   sIsEpc9N             = 233;               (* BYTE *)
+   sADBoard             = 234;               (* BYTE *)
+   sBoardVersion        = 235;               (* BYTE *)
+   sActiveE9Board       = 236;               (* BYTE *)
+   sMode                = 237;               (* BYTE *)
+   sRange               = 238;               (* BYTE *)
+   sF2Response          = 239;               (* BYTE *)
+
+   sRsOn                = 240;               (* BYTE *)
+   sCSlowRange          = 241;               (* BYTE *)
+   sCCRange             = 242;               (* BYTE *)
+   sCCGain              = 243;               (* BYTE *)
+   sCSlowToTestDac      = 244;               (* BYTE *)
+   sStimPath            = 245;               (* BYTE *)
+   sCCTrackTau          = 246;               (* BYTE *)
+   sWasClipping         = 247;               (* BYTE *)
+
+   sRepetitiveCSlow     = 248;               (* BYTE *)
+   sLastCSlowRange      = 249;               (* BYTE *)
+      sOld1             = 250;               (* BYTE *)
+   sCanCCFast           = 251;               (* BYTE *)
+   sCanLowCCRange       = 252;               (* BYTE *)
+   sCanHighCCRange      = 253;               (* BYTE *)
+   sCanCCTracking       = 254;               (* BYTE *)
+   sHasVmonPath         = 255;               (* BYTE *)
+
+   sHasNewCCMode        = 256;               (* BYTE *)
+   sSelector            = 257;               (* CHAR *)
+   sHoldInverted        = 258;               (* BYTE *)
+   sAutoCFast           = 259;               (* BYTE *)
+   sAutoCSlow           = 260;               (* BYTE *)
+   sHasVmonX100         = 261;               (* BYTE *)
+   sTestDacOn           = 262;               (* BYTE *)
+   sQMuxAdcOn           = 263;               (* BYTE *)
+
+   sImon1Bandwidth      = 264;               (* LONGREAL *)
+   sStimScale           = 272;               (* LONGREAL *)
+
+   sGain                = 280;               (* BYTE *)
+   sFilter1             = 281;               (* BYTE *)
+   sStimFilterOn        = 282;               (* BYTE *)
+   sRsSlow              = 283;               (* BYTE *)
+      sOld2             = 284;               (* BYTE *)
+   sCCCFastOn           = 285;               (* BYTE *)
+   sCCFastSpeed         = 286;               (* BYTE *)
+   sF2Source            = 287;               (* BYTE *)
+
+   sTestRange           = 288;               (* BYTE *)
+   sTestDacPath         = 289;               (* BYTE *)
+   sMuxChannel          = 290;               (* BYTE *)
+   sMuxGain64           = 291;               (* BYTE *)
+   sVmonX100            = 292;               (* BYTE *)
+   sIsQuadro            = 293;               (* BYTE *)
+   sF1Mode              = 294;               (* BYTE *)
+      sOld3             = 295;               (* BYTE *)
+
+   sStimFilterHz        = 296;               (* LONGREAL *)
+   sRsTau               = 304;               (* LONGREAL *)
+   sDacToAdcDelay       = 312;               (* LONGREAL *)
+   sInputFilterTau      = 320;               (* LONGREAL *)
+   sOutputFilterTau     = 328;               (* LONGREAL *)
+   sVmonFactor          = 336;               (* LONGREAL *)
+   sCalibDate           = 344;               (* 16 = SizeCalibDate *)
+   sVmonOffset          = 360;               (* LONGREAL *)
+
+   sEEPROMKind          = 368;               (* BYTE *)
+   sVrefX2              = 369;               (* BYTE *)
+   sHasVrefX2AndF2Vmon  = 370;               (* BYTE *)
+      sSpare1           = 371;               (* BYTE *)
+      sSpare2           = 372;               (* BYTE *)
+      sSpare3           = 373;               (* BYTE *)
+      sSpare4           = 374;               (* BYTE *)
+      sSpare5           = 375;               (* BYTE *)
+
+   sCCStimDacScale      = 376;               (* LONGREAL *)
+   sVmonFiltBandwidth   = 384;               (* LONGREAL *)
+   sVmonFiltFrequency   = 392;               (* LONGREAL *)
+   AmplifierStateSize   = 400;                  (* = 50 * 8 *)
+
+
+   (* LockInParams      = RECORD *)
+   loExtCalPhase        =   0; (* LONGREAL *)
+   loExtCalAtten        =   8; (* LONGREAL *)
+   loPLPhase            =  16; (* LONGREAL *)
+   loPLPhaseY1          =  24; (* LONGREAL *)
+   loPLPhaseY2          =  32; (* LONGREAL *)
+   loUsedPhaseShift     =  40; (* LONGREAL *)
+   loUsedAttenuation    =  48; (* LONGREAL *)
+      loSpare           =  56; (* LONGREAL *)
+   loExtCalValid        =  64; (* BOOLEAN *)
+   loPLPhaseValid       =  65; (* BOOLEAN *)
+   loLockInMode         =  66; (* BYTE *)
+   loCalMode            =  67; (* BYTE *)
+      loSpares          =  68; (* remaining *)
+   LockInParamsSize     =  96;
+
+
+   (* AmplStateRecord   = RECORD *)
+   AmMark               =   0; (* INT32 *)
+   AmStateCount         =   4; (* INT32 *)
+   AmStateVersion       =   8; (* CHAR *)
+      AmFiller1         =   9; (* BYTE *)
+      AmFiller2         =  10; (* BYTE *)
+      AmFiller3         =  11; (* BYTE *)
+      AmFiller4         =  12; (* INT32 *)
+   AmLockInParams       =  16; (* LockInParamsSize = 96 *)
+   AmAmplifierState     = 112; (* AmplifierStateSize = 400 *)
+   AmIntSol             = 512; (* INT32 *)
+   AmExtSol             = 516; (* INT32 *)
+      AmFiller5         = 520; (* spares: 36 bytes *)
+   AmCRC                = 556; (* CARD32 *)
+   StateRecSize         = 560;      (* = 70 * 8 *)
+
+   (* SeriesRecord      = RECORD *)
+   SeMark               =   0; (* INT32 *)
+   SeSeriesCount        =   4; (* INT32 *)
+      SeFiller1         =   8; (* INT32 *)
+   SeCRC                =  12; (* CARD32 *)
+   SeriesRecSize        =  16;      (* = 2 * 8 *)
+
+   (* RootRecord        = RECORD *)
+   RoVersion            =   0; (* INT32 *)
+   RoMark               =   4; (* INT32 *)
+   RoVersionName        =   8; (* String32Type *)
+   RoAmplifierName      =  40; (* String32Type *)
+   RoAmplifier          =  72; (* CHAR *)
+   RoADBoard            =  73; (* CHAR *)
+   RoCreator            =  74; (* CHAR *)
+      RoFiller1         =  75; (* BYTE *)
+   RoCRC                =  76; (* CARD32 *)
+   RootRecSize          =  80;      (* = 10 * 8 *)
+   (* END RootRecord *)
+
