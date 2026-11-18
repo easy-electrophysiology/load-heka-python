@@ -34,17 +34,19 @@ def fill_pul_with_data(pul, fh, group_idx, series_idx, add_zero_offset):
             if interleave_size != 0:
                 assert interleave_size % size == 0, "`size` does not divide " "evenly `interleave size"
 
-                batch_size = int(interleave_size / size)
+                batch_size = interleave_size // size
 
-                assert length % batch_size == 0, "`length` does not divide " "evenly `batch_size size"
-                n_batches = int(length / batch_size)
+                n_full, remainder = divmod(length, batch_size)
+                block_sizes = [batch_size] * n_full
+                if remainder:
+                    block_sizes.append(remainder)
 
-                data = np.zeros((n_batches * batch_size)).astype(np_dtype)
+                data = np.zeros(length, dtype=np_dtype)
 
-                for chunk in range(n_batches):
+                for chunk, count in enumerate(block_sizes):
                     fh.seek(start)
-                    chunk_data = struct.unpack(endian + fmt * batch_size, fh.read(size * batch_size))
-                    data[chunk * batch_size : chunk * batch_size + batch_size] = np.array(chunk_data, dtype=np_dtype)
+                    chunk_data = struct.unpack(endian + fmt * count, fh.read(size * count))
+                    data[chunk * batch_size : chunk * batch_size + count] = np.array(chunk_data, dtype=np_dtype)
                     start += rec["hd"]["TrInterleaveSkip"]
             else:
                 fh.seek(start)
