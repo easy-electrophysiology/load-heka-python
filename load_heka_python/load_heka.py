@@ -20,7 +20,7 @@ OLD_VERSIONS = ["v2x65, 19-Dec-2011"]
 
 # PatchMaster Next versions using the v2000 (64-bit offset) file format
 V2000_VERSIONS = [
-    "1.6.0 [Build 1066]",
+    "1.6.0 [Build 1066]", "1.7.0 [Build 1072]"
 ]
 
 
